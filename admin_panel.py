@@ -1,17 +1,15 @@
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, send_from_directory
 from database import get_all_tickets, update_ticket_status, get_system_stats, init_db
-from database import get_ticket_by_id, get_media_files_by_ticket, get_conversation_messages, save_message
+from database import get_ticket_by_id, get_media_files_by_ticket, get_conversation_messages
+from telegram_utils import send_telegram_message
 import pysqlite3 as sqlite3
 import os
 import hashlib
-import requests
-import json
 
 app = Flask(__name__)
 app.secret_key = 'admin-secret-key-12345'
 
 # Настройки
-TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', 'YOUR_BOT_TOKEN_HERE')
 UPLOAD_FOLDER = 'media'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
@@ -23,27 +21,6 @@ def hash_password(password):
 ADMIN_CREDENTIALS = {
     'admin': hash_password('admin123')
 }
-
-async def send_telegram_message_async(user_id, message):
-    """Асинхронная отправка сообщения пользователю через Telegram Bot API"""
-    if TELEGRAM_BOT_TOKEN == 'YOUR_BOT_TOKEN_HERE':
-        return False, "Токен бота не настроен"
-    
-    try:
-        # Импортируем бота и отправляем сообщение
-        from bot_main import main_bot
-        success, result = await main_bot.send_admin_message(user_id, message)
-        return success, result
-    except Exception as e:
-        return False, f"Ошибка отправки: {str(e)}"
-
-def send_telegram_message(user_id, message):
-    """Синхронная обертка для асинхронной отправки сообщения"""
-    import asyncio
-    try:
-        return asyncio.run(send_telegram_message_async(user_id, message))
-    except Exception as e:
-        return False, f"Ошибка: {str(e)}"
 
 @app.route('/')
 def index():
