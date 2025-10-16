@@ -24,28 +24,26 @@ ADMIN_CREDENTIALS = {
     'admin': hash_password('admin123')
 }
 
-def send_telegram_message(user_id, message):
-    """Отправка сообщения пользователю через Telegram Bot API"""
+async def send_telegram_message_async(user_id, message):
+    """Асинхронная отправка сообщения пользователю через Telegram Bot API"""
     if TELEGRAM_BOT_TOKEN == 'YOUR_BOT_TOKEN_HERE':
         return False, "Токен бота не настроен"
     
-    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-    payload = {
-        'chat_id': user_id,
-        'text': message,
-        'parse_mode': 'HTML'
-    }
-    
     try:
-        response = requests.post(url, json=payload, timeout=10)
-        if response.status_code == 200:
-            # Сохраняем сообщение в базу
-            save_message(user_id, message, 'text', True)
-            return True, "Сообщение отправлено"
-        else:
-            return False, f"Ошибка Telegram API: {response.text}"
+        # Импортируем бота и отправляем сообщение
+        from bot_main import main_bot
+        success, result = await main_bot.send_admin_message(user_id, message)
+        return success, result
     except Exception as e:
         return False, f"Ошибка отправки: {str(e)}"
+
+def send_telegram_message(user_id, message):
+    """Синхронная обертка для асинхронной отправки сообщения"""
+    import asyncio
+    try:
+        return asyncio.run(send_telegram_message_async(user_id, message))
+    except Exception as e:
+        return False, f"Ошибка: {str(e)}"
 
 @app.route('/')
 def index():
