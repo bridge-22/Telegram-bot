@@ -1,8 +1,9 @@
 import logging
 import os
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackQueryHandler
-from bot_handlers import register_handlers
-from database import init_db
+from bot_handlers import register_handlers, send_message_to_user
+from database import init_db, save_message
+import asyncio
 
 # Настройка логирования
 logging.basicConfig(
@@ -20,6 +21,10 @@ class TelegramBot:
         """Регистрация обработчиков"""
         register_handlers(self.application)
     
+    async def send_admin_message(self, user_id: int, message: str):
+        """Публичный метод для отправки сообщений от администратора"""
+        return await send_message_to_user(self.application.bot, user_id, message)
+    
     def run(self):
         """Запуск бота"""
         print("🤖 Бот запущен...")
@@ -31,7 +36,12 @@ def main():
     init_db()
     
     # Токен бота
-    BOT_TOKEN = ""
+    BOT_TOKEN = "8256261302:AAEGdLaIdoiwFGc0Zagr6A1kvqtErscj7Wo"
+    
+    if BOT_TOKEN == 'YOUR_BOT_TOKEN_HERE':
+        print("❌ Ошибка: Установите TELEGRAM_BOT_TOKEN в переменных окружения")
+        print("💡 Получите токен у @BotFather в Telegram")
+        return
     
     # Запуск бота
     bot = TelegramBot(BOT_TOKEN)
