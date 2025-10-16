@@ -1,115 +1,27 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Tickets</title>
-    <meta charset="utf-8">
-    <style>
-        body { 
-            font-family: Arial, sans-serif; 
-            margin: 0; 
-            padding: 0;
-            background: #f0f2f5;
-        }
-        .header { 
-            background: white; 
-            padding: 20px; 
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-        }
-        .nav a { 
-            margin-right: 20px; 
-            text-decoration: none; 
-            color: #007cba;
-            font-weight: bold;
-            padding: 8px 16px;
-            border-radius: 4px;
-        }
-        .nav a:hover {
-            background: #f0f8ff;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
-        }
-        .ticket { 
-            background: white; 
-            padding: 20px; 
-            margin: 15px 0; 
-            border-radius: 8px; 
-            border-left: 4px solid #007cba;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .ticket-header { 
-            display: flex; 
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-        .ticket-actions { 
-            margin-top: 15px; 
-        }
-        button { 
-            padding: 8px 16px; 
-            margin-right: 10px; 
-            cursor: pointer; 
-            border: none;
-            border-radius: 4px;
-            font-weight: bold;
-        }
-        .btn-resolved {
-            background: #28a745;
-            color: white;
-        }
-        .btn-progress {
-            background: #ffc107;
-            color: black;
-        }
-        .btn-open {
-            background: #dc3545;
-            color: white;
-        }
-        .status-badge {
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-        .status-open { background: #ffe6e6; color: #dc3545; }
-        .status-in_progress { background: #fff3cd; color: #856404; }
-        .status-resolved { background: #e6f4ea; color: #28a745; }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <div class="container">
-            <h1>🎫 Управление тикетами</h1>
-            <div class="nav">
-                <a href="/dashboard">📊 Дашборд</a>
-                <a href="/tickets">🎫 Все тикеты</a>
-                <a href="/tickets?status=open">⚠️ Открытые</a>
-                <a href="/tickets?status=resolved">✅ Решенные</a>
-                <a href="/logout" style="color: #ff4444;">🚪 Выйти</a>
-            </div>
-        </div>
+<!-- ЗАМЕНИТЕ этот блок в tickets.html -->
+<div class="container">
+    <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+        <h3>Фильтр: 
+            {% if status == 'all' %}Все тикеты ({{ tickets|length }})
+            {% elif status == 'open' %}Открытые ({{ tickets|length }})
+            {% elif status == 'resolved' %}Решенные ({{ tickets|length }})
+            {% else %}Все тикеты ({{ tickets|length }})
+            {% endif %}
+        </h3>
+        <p><small>Всего тикетов: {{ tickets|length }}</small></p>
     </div>
     
-    <div class="container">
-        <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-            <h3>Фильтр: 
-                {% if status == 'all' %}Все тикеты
-                {% elif status == 'open' %}Открытые
-                {% elif status == 'resolved' %}Решенные
-                {% else %}Все тикеты
-                {% endif %}
-            </h3>
-        </div>
-        
+    {% if tickets %}
         {% for ticket in tickets %}
         <div class="ticket">
             <div class="ticket-header">
                 <div>
-                    <strong>#{{ ticket.id }} - {{ ticket.first_name }} ({{ ticket.username or 'N/A' }})</strong>
+                    <strong>#{{ ticket.id }} - 
+                        {% if ticket.first_name %}{{ ticket.first_name }}
+                        {% else %}User#{{ ticket.user_id }}
+                        {% endif %}
+                        ({{ ticket.username or 'N/A' }})
+                    </strong>
                 </div>
                 <span class="status-badge status-{{ ticket.status }}">
                     {% if ticket.status == 'open' %}⚠️ Открыт
@@ -145,30 +57,12 @@
                 {% endif %}
             </div>
         </div>
-        {% else %}
-        <div style="background: white; padding: 40px; text-align: center; border-radius: 8px;">
-            <h3>🎉 Тикетов нет</h3>
-            <p>Нет тикетов для отображения по выбранному фильтру</p>
-        </div>
         {% endfor %}
-    </div>
-
-    <script>
-    function updateTicket(ticketId, status) {
-        if (confirm('Изменить статус тикета?')) {
-            fetch('/api/tickets/' + ticketId, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: status })
-            }).then(response => {
-                if (response.ok) {
-                    location.reload();
-                } else {
-                    alert('Ошибка при обновлении тикета');
-                }
-            });
-        }
-    }
-    </script>
-</body>
-</html>
+    {% else %}
+        <div style="background: white; padding: 40px; text-align: center; border-radius: 8px;">
+            <h3>😔 Тикетов нет</h3>
+            <p>Нет тикетов для отображения по выбранному фильтру "{{ status }}"</p>
+            <p><a href="/debug/db">Проверить базу данных</a></p>
+        </div>
+    {% endif %}
+</div>
