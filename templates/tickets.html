@@ -104,7 +104,7 @@
             {% else %}Все тикеты ({{ tickets|length }})
             {% endif %}
         </h3>
-        <p><small>Всего тикетов: {{ tickets|length }}</small></p>
+        <p><small>💡 <strong>Чтобы отправить сообщение пользователю, нажмите на номер тикета</strong></small></p>
     </div>
     
     {% if tickets %}
@@ -112,7 +112,10 @@
         <div class="ticket">
             <div class="ticket-header">
                 <div>
-                    <strong>#{{ ticket.id }} - 
+                    <strong>
+                        <a href="/ticket/{{ ticket.id }}" style="text-decoration: none; color: #007cba; font-size: 1.2em;">
+                            🔗 #{{ ticket.id }}
+                        </a> - 
                         {% if ticket.first_name %}{{ ticket.first_name }}
                         {% else %}User#{{ ticket.user_id }}
                         {% endif %}
@@ -141,7 +144,12 @@
             {% if ticket.admin_notes %}
             <p><strong>💬 Заметки админа:</strong> {{ ticket.admin_notes }}</p>
             {% endif %}
+            
             <div class="ticket-actions">
+                <a href="/ticket/{{ ticket.id }}" style="background: #007cba; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; margin-right: 10px;">
+                    💬 Написать пользователю
+                </a>
+                
                 {% if ticket.status != 'resolved' %}
                 <button class="btn-resolved" onclick="updateTicket({{ ticket.id }}, 'resolved')">✅ Отметить решенным</button>
                 {% endif %}
@@ -158,7 +166,6 @@
         <div style="background: white; padding: 40px; text-align: center; border-radius: 8px;">
             <h3>😔 Тикетов нет</h3>
             <p>Нет тикетов для отображения по выбранному фильтру "{{ status }}"</p>
-            <p><a href="/debug/db">Проверить базу данных</a></p>
         </div>
     {% endif %}
 </div>
@@ -182,3 +189,4 @@
     </script>
 </body>
 </html>
+
