@@ -31,7 +31,7 @@ def main():
     init_db()
     
     # Токен бота
-    BOT_TOKEN = "8256261302:AAEGdLaIdoiwFGc0Zagr6A1kvqtErscj7Wo"
+    BOT_TOKEN = ""
     
     # Запуск бота
     bot = TelegramBot(BOT_TOKEN)
