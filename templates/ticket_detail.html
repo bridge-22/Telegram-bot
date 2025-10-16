@@ -294,6 +294,45 @@
 
     // Автообновление переписки каждые 10 секунд
     setInterval(loadConversation, 10000);
+
+    // В секции <script> добавьте более подробное логирование
+    function sendMessage() {
+        const messageText = document.getElementById('message-text').value.trim();
+        const resultDiv = document.getElementById('message-result');
+        
+        if (!messageText) {
+            resultDiv.innerHTML = '<span style="color: red;">Введите текст сообщения</span>';
+            return;
+        }
+    
+        console.log(`Отправка сообщения для тикета {{ ticket.id }}, пользователь: {{ ticket.user_id }}`);
+    
+        fetch('/api/ticket/{{ ticket.id }}/send_message', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: messageText })
+        })
+        .then(response => {
+            console.log('Response status:', response.status);
+            return response.json().then(data => {
+                return { ok: response.ok, data: data };
+            });
+        })
+        .then(({ ok, data }) => {
+            console.log('Response data:', data);
+            if (ok && data.success) {
+                resultDiv.innerHTML = '<span style="color: green;">✅ ' + data.message + '</span>';
+                document.getElementById('message-text').value = '';
+                loadConversation();
+            } else {
+                resultDiv.innerHTML = '<span style="color: red;">❌ ' + (data.error || 'Неизвестная ошибка') + '</span>';
+            }
+        })
+        .catch(error => {
+            console.error('Fetch error:', error);
+            resultDiv.innerHTML = '<span style="color: red;">❌ Ошибка отправки: ' + error + '</span>';
+        });
+    }
     </script>
 </body>
 </html>
