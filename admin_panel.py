@@ -1,9 +1,8 @@
-# telegram_bot/admin_panel.py
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+from database import get_all_tickets, update_ticket_status, get_system_stats, init_db
 import pysqlite3 as sqlite3
 import os
 import hashlib
-from database import get_all_tickets, update_ticket_status, get_system_stats, init_db
 
 app = Flask(__name__)
 app.secret_key = 'admin-secret-key-12345'
@@ -44,11 +43,11 @@ def dashboard():
         return redirect(url_for('login'))
     
     stats = get_system_stats()
-    open_tickets = get_all_tickets('open')
+    print(f"📊 Статистика для дашборда: {stats}")
     
     return render_template('dashboard.html', 
                          stats=stats,
-                         open_tickets=open_tickets)
+                         recent_tickets=stats.get('recent_tickets', []))
 
 @app.route('/tickets')
 def tickets_page():
@@ -56,10 +55,9 @@ def tickets_page():
         return redirect(url_for('login'))
     
     status = request.args.get('status', 'all')
-    if status == 'all':
-        tickets = get_all_tickets()
-    else:
-        tickets = get_all_tickets(status)
+    tickets = get_all_tickets(status if status != 'all' else None)
+    
+    print(f"🎫 Запрошены тикеты со статусом '{status}': найдено {len(tickets)}")
     
     return render_template('tickets.html', tickets=tickets, status=status)
 
@@ -92,6 +90,35 @@ def api_stats():
     stats = get_system_stats()
     return jsonify(stats)
 
+@app.route('/debug/db')
+def debug_db():
+    """Страница отладки базы данных"""
+    if 'admin' not in session:
+        return redirect(url_for('login'))
+    
+    conn = sqlite3.connect('bot_database.db')
+    cursor = conn.cursor()
+    
+    # Получаем информацию о таблицах
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+    tables = cursor.fetchall()
+    
+    db_info = {}
+    for table in tables:
+        table_name = table[0]
+        cursor.execute(f"SELECT COUNT(*) FROM {table_name}")
+        count = cursor.fetchone()[0]
+        cursor.execute(f"PRAGMA table_info({table_name})")
+        columns = cursor.fetchall()
+        db_info[table_name] = {
+            'count': count,
+            'columns': columns
+        }
+    
+    conn.close()
+    
+    return render_template('debug_db.html', db_info=db_info)
+
 @app.route('/logout')
 def logout():
     session.pop('admin', None)
@@ -99,7 +126,9 @@ def logout():
 
 if __name__ == '__main__':
     # Инициализируем базу данных
+    print("🚀 Инициализация админ-панели...")
     init_db()
     
     # Запускаем на всех интерфейсах порт 5000
+    print("🌐 Запуск Flask приложения...")
     app.run(debug=True, host='0.0.0.0', port=5000)
