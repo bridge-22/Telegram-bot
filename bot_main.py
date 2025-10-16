@@ -9,6 +9,7 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
+logger = logging.getLogger(__name__)
 
 class TelegramBot:
     def __init__(self, token):
@@ -21,7 +22,8 @@ class TelegramBot:
     
     def run(self):
         """Запуск бота"""
-        print("Бот запущен...")
+        print("🤖 Бот запущен...")
+        print("📊 Используйте /start для начала работы")
         self.application.run_polling()
 
 def main():
