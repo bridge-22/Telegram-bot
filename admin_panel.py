@@ -312,20 +312,28 @@ def send_telegram_message(user_id, message):
     
     try:
         response = requests.post(url, json=payload, timeout=10)
+        print(f"[DEBUG] Отправка сообщения пользователю {user_id}: {message}")
+        print(f"[DEBUG] Response status: {response.status_code}")
+        print(f"[DEBUG] Response text: {response.text}")
+        
         if response.status_code == 200:
-            # Сохраняем сообщение в базу
-            save_message(user_id, message, 'text', True)
-            return True, "Сообщение отправлено"
+            data = response.json()
+            if data.get('ok'):
+                # Сохраняем сообщение в базу
+                save_message(user_id, message, 'text', True)
+                return True, "Сообщение отправлено"
+            else:
+                error_msg = f"Telegram API error: {data.get('description')}"
+                print(f"[DEBUG] {error_msg}")
+                return False, error_msg
         else:
-            error_msg = f"Ошибка Telegram API: {response.status_code}"
-            try:
-                error_data = response.json()
-                error_msg = f"Ошибка Telegram API: {error_data.get('description', 'Unknown error')}"
-            except:
-                pass
+            error_msg = f"HTTP error: {response.status_code}"
+            print(f"[DEBUG] {error_msg}")
             return False, error_msg
     except Exception as e:
-        return False, f"Ошибка отправки: {str(e)}"
+        error_msg = f"Exception: {str(e)}"
+        print(f"[DEBUG] {error_msg}")
+        return False, error_msg
 
 # Маршруты Flask
 @app.route('/')
