@@ -1,9 +1,8 @@
 import logging
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
-from telegram.ext import ContextTypes, ConversationHandler, MessageHandler, filters, CommandHandler, CallbackContext
+from telegram.ext import ContextTypes, ConversationHandler, MessageHandler, filters, CommandHandler
 from database import save_user, save_message, create_support_ticket, save_media_file
 import os
-import requests
 
 # Настройка логирования
 logger = logging.getLogger(__name__)
@@ -152,74 +151,6 @@ async def handle_manager_dialog(update: Update, context: ContextTypes.DEFAULT_TY
     
     return MAIN_MENU
 
-async def handle_report_issue(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Обработка отчета о нарушении"""
-    user_id = update.effective_user.id
-    current_ticket_id = context.user_data.get('current_ticket_id')
-    
-    if not current_ticket_id:
-        # Создаем новый тикет если его нет
-        current_ticket_id = create_support_ticket(user_id, "Отчет о нарушении", 'violation_report')
-        context.user_data['current_ticket_id'] = current_ticket_id
-    
-    if update.message.text == "↩️ Назад в меню":
-        save_message(user_id, "Отмена отчета о нарушении", 'user')
-        await update.message.reply_text(
-            "Создание отчета отменено.",
-            reply_markup=create_main_menu()
-        )
-        context.user_data.pop('current_ticket_id', None)
-        return MAIN_MENU
-    
-    # Обработка текстовых сообщений
-    if update.message.text:
-        save_message(user_id, update.message.text, 'user')
-        
-        # Обновляем описание тикета
-        from database import update_ticket_status
-        update_ticket_status(current_ticket_id, 'open', f"Описание нарушения: {update.message.text}")
-        
-        await update.message.reply_text(
-            "✅ Описание нарушения сохранено! Хотите прикрепить фото/видео?",
-            reply_markup=ReplyKeyboardMarkup([
-                [KeyboardButton("✅ Да, прикрепить файл")],
-                [KeyboardButton("❌ Нет, завершить отчет")]
-            ], resize_keyboard=True)
-        )
-        return WAITING_MEDIA
-    
-    # Обработка медиафайлов
-    elif update.message.photo or update.message.video or update.message.document:
-        await handle_media_file(update, context, current_ticket_id)
-        return REPORT_ISSUE
-    
-    return REPORT_ISSUE
-
-async def handle_media_decision(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Обработка решения о прикреплении медиа"""
-    user_id = update.effective_user.id
-    text = update.message.text
-    current_ticket_id = context.user_data.get('current_ticket_id')
-    
-    if text == "✅ Да, прикрепить файл":
-        save_message(user_id, "Решил прикрепить файл", 'user')
-        await update.message.reply_text(
-            "Прикрепите фото, видео или документ:",
-            reply_markup=ReplyKeyboardMarkup([[KeyboardButton("❌ Завершить без файла")]], resize_keyboard=True)
-        )
-        return REPORT_ISSUE
-    
-    elif text == "❌ Нет, завершить отчет" or text == "❌ Завершить без файла":
-        save_message(user_id, "Завершил отчет без файла", 'user')
-        await update.message.reply_text(
-            f"✅ Отчет о нарушении #{current_ticket_id} завершен! Спасибо за бдительность.",
-            reply_markup=create_main_menu()
-        )
-        context.user_data.pop('current_ticket_id', None)
-        return MAIN_MENU
-    
-    return WAITING_MEDIA
-
 async def handle_media_file(update: Update, context: ContextTypes.DEFAULT_TYPE, ticket_id: int):
     """Обработка медиафайлов"""
     user_id = update.effective_user.id
@@ -280,13 +211,73 @@ async def handle_media_file(update: Update, context: ContextTypes.DEFAULT_TYPE, 
             reply_markup=create_back_menu()
         )
 
-async def handle_additional_media(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Обработка дополнительных медиафайлов или завершения отчета"""
+async def handle_report_issue(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обработка отчета о нарушении"""
+    user_id = update.effective_user.id
+    current_ticket_id = context.user_data.get('current_ticket_id')
+    
+    if not current_ticket_id:
+        # Создаем новый тикет если его нет
+        current_ticket_id = create_support_ticket(user_id, "Отчет о нарушении", 'violation_report')
+        context.user_data['current_ticket_id'] = current_ticket_id
+    
+    if update.message.text == "↩️ Назад в меню":
+        save_message(user_id, "Отмена отчета о нарушении", 'user')
+        await update.message.reply_text(
+            "Создание отчета отменено.",
+            reply_markup=create_main_menu()
+        )
+        context.user_data.pop('current_ticket_id', None)
+        return MAIN_MENU
+    
+    # Обработка текстовых сообщений
+    if update.message.text and update.message.text not in ["✅ Прикрепить еще файл", "❌ Завершить отчет"]:
+        save_message(user_id, update.message.text, 'user')
+        
+        # Обновляем описание тикета
+        from database import update_ticket_status
+        update_ticket_status(current_ticket_id, 'open', f"Описание нарушения: {update.message.text}")
+        
+        await update.message.reply_text(
+            "✅ Описание нарушения сохранено! Хотите прикрепить фото/видео?",
+            reply_markup=ReplyKeyboardMarkup([
+                [KeyboardButton("✅ Да, прикрепить файл")],
+                [KeyboardButton("❌ Нет, завершить отчет")]
+            ], resize_keyboard=True)
+        )
+        return WAITING_MEDIA
+    
+    # Обработка медиафайлов
+    elif update.message.photo or update.message.video or update.message.document:
+        await handle_media_file(update, context, current_ticket_id)
+        return REPORT_ISSUE
+    
+    return REPORT_ISSUE
+
+async def handle_media_decision(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обработка решения о прикреплении медиа"""
     user_id = update.effective_user.id
     text = update.message.text
     current_ticket_id = context.user_data.get('current_ticket_id')
     
-    if text == "✅ Прикрепить еще файл":
+    if text == "✅ Да, прикрепить файл":
+        save_message(user_id, "Решил прикрепить файл", 'user')
+        await update.message.reply_text(
+            "Прикрепите фото, видео или документ:",
+            reply_markup=ReplyKeyboardMarkup([[KeyboardButton("❌ Завершить без файла")]], resize_keyboard=True)
+        )
+        return REPORT_ISSUE
+    
+    elif text == "❌ Нет, завершить отчет" or text == "❌ Завершить без файла":
+        save_message(user_id, "Завершил отчет без файла", 'user')
+        await update.message.reply_text(
+            f"✅ Отчет о нарушении #{current_ticket_id} завершен! Спасибо за бдительность.",
+            reply_markup=create_main_menu()
+        )
+        context.user_data.pop('current_ticket_id', None)
+        return MAIN_MENU
+    
+    elif text == "✅ Прикрепить еще файл":
         save_message(user_id, "Хочет прикрепить еще файл", 'user')
         await update.message.reply_text(
             "Прикрепите следующий файл:",
@@ -303,7 +294,7 @@ async def handle_additional_media(update: Update, context: ContextTypes.DEFAULT_
         context.user_data.pop('current_ticket_id', None)
         return MAIN_MENU
     
-    return REPORT_ISSUE
+    return WAITING_MEDIA
 
 async def cancel_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработчик отмены"""
@@ -358,31 +349,10 @@ def register_handlers(application):
         allow_reentry=True
     )
     
-    # Обработчик для дополнительных медиафайлов в отчетах
-    additional_media_handler = MessageHandler(
-        filters.TEXT & ~filters.COMMAND,
-        handle_additional_media
-    )
-    
     # Базовые обработчики
     application.add_handler(conv_handler)
-    application.add_handler(additional_media_handler)
     
     # Обработчик ошибок
     application.add_error_handler(error_handler)
     
     logger.info("Все обработчики зарегистрированы")
-
-# Функция для отправки сообщений от администратора пользователю
-async def send_message_to_user(bot, user_id: int, message: str):
-    """Отправка сообщения от администратора пользователю"""
-    try:
-        await bot.send_message(
-            chat_id=user_id,
-            text=f"👨‍💼 Ответ от поддержки:\n\n{message}",
-            parse_mode='HTML'
-        )
-        return True, "Сообщение отправлено"
-    except Exception as e:
-        logger.error(f"Ошибка отправки сообщения пользователю {user_id}: {e}")
-        return False, f"Ошибка отправки: {str(e)}"
