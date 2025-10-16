@@ -1,4 +1,6 @@
-apt-get install python3-devel
+apt-get install python3
+apt-get install python3-dev
 apt-get install libsqlite3-dev
-apt-get install python3-module-sqlite3
+apt-get install python3-modules-sqlite3
+apt-get install python3-module-pip
 
