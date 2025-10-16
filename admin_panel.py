@@ -1,11 +1,19 @@
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, send_from_directory
 from database import get_all_tickets, update_ticket_status, get_system_stats, init_db
+from database import get_ticket_by_id, get_media_files_by_ticket, get_conversation_messages, save_message
 import pysqlite3 as sqlite3
 import os
 import hashlib
+import requests
+import json
 
 app = Flask(__name__)
 app.secret_key = 'admin-secret-key-12345'
+
+# Настройки
+TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', 'YOUR_BOT_TOKEN_HERE')
+UPLOAD_FOLDER = 'media'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # Хэширование паролей
 def hash_password(password):
@@ -15,6 +23,29 @@ def hash_password(password):
 ADMIN_CREDENTIALS = {
     'admin': hash_password('admin123')
 }
+
+def send_telegram_message(user_id, message):
+    """Отправка сообщения пользователю через Telegram Bot API"""
+    if TELEGRAM_BOT_TOKEN == 'YOUR_BOT_TOKEN_HERE':
+        return False, "Токен бота не настроен"
+    
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    payload = {
+        'chat_id': user_id,
+        'text': message,
+        'parse_mode': 'HTML'
+    }
+    
+    try:
+        response = requests.post(url, json=payload, timeout=10)
+        if response.status_code == 200:
+            # Сохраняем сообщение в базу
+            save_message(user_id, message, 'text', True)
+            return True, "Сообщение отправлено"
+        else:
+            return False, f"Ошибка Telegram API: {response.text}"
+    except Exception as e:
+        return False, f"Ошибка отправки: {str(e)}"
 
 @app.route('/')
 def index():
@@ -43,11 +74,11 @@ def dashboard():
         return redirect(url_for('login'))
     
     stats = get_system_stats()
-    print(f"📊 Статистика для дашборда: {stats}")
+    open_tickets = get_all_tickets('open')
     
     return render_template('dashboard.html', 
                          stats=stats,
-                         recent_tickets=stats.get('recent_tickets', []))
+                         open_tickets=open_tickets)
 
 @app.route('/tickets')
 def tickets_page():
@@ -55,11 +86,35 @@ def tickets_page():
         return redirect(url_for('login'))
     
     status = request.args.get('status', 'all')
-    tickets = get_all_tickets(status if status != 'all' else None)
-    
-    print(f"🎫 Запрошены тикеты со статусом '{status}': найдено {len(tickets)}")
+    if status == 'all':
+        tickets = get_all_tickets()
+    else:
+        tickets = get_all_tickets(status)
     
     return render_template('tickets.html', tickets=tickets, status=status)
+
+@app.route('/ticket/<int:ticket_id>')
+def ticket_detail(ticket_id):
+    if 'admin' not in session:
+        return redirect(url_for('login'))
+    
+    ticket = get_ticket_by_id(ticket_id)
+    if not ticket:
+        return "Тикет не найден", 404
+    
+    media_files = get_media_files_by_ticket(ticket_id)
+    conversation = get_conversation_messages(ticket['user_id'])
+    
+    return render_template('ticket_detail.html', 
+                         ticket=ticket, 
+                         media_files=media_files,
+                         conversation=conversation)
+
+@app.route('/media/<path:filename>')
+def serve_media(filename):
+    if 'admin' not in session:
+        return "Unauthorized", 401
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 @app.route('/api/tickets')
 def api_tickets():
@@ -82,6 +137,40 @@ def api_update_ticket(ticket_id):
     update_ticket_status(ticket_id, status, notes)
     return jsonify({'success': True})
 
+@app.route('/api/ticket/<int:ticket_id>/send_message', methods=['POST'])
+def api_send_message(ticket_id):
+    if 'admin' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    ticket = get_ticket_by_id(ticket_id)
+    if not ticket:
+        return jsonify({'error': 'Ticket not found'}), 404
+    
+    data = request.get_json()
+    message = data.get('message')
+    
+    if not message:
+        return jsonify({'error': 'Message is required'}), 400
+    
+    success, result_message = send_telegram_message(ticket['user_id'], message)
+    
+    if success:
+        return jsonify({'success': True, 'message': result_message})
+    else:
+        return jsonify({'success': False, 'error': result_message}), 500
+
+@app.route('/api/ticket/<int:ticket_id>/conversation')
+def api_get_conversation(ticket_id):
+    if 'admin' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    ticket = get_ticket_by_id(ticket_id)
+    if not ticket:
+        return jsonify({'error': 'Ticket not found'}), 404
+    
+    conversation = get_conversation_messages(ticket['user_id'])
+    return jsonify(conversation)
+
 @app.route('/api/stats')
 def api_stats():
     if 'admin' not in session:
@@ -90,35 +179,6 @@ def api_stats():
     stats = get_system_stats()
     return jsonify(stats)
 
-@app.route('/debug/db')
-def debug_db():
-    """Страница отладки базы данных"""
-    if 'admin' not in session:
-        return redirect(url_for('login'))
-    
-    conn = sqlite3.connect('bot_database.db')
-    cursor = conn.cursor()
-    
-    # Получаем информацию о таблицах
-    cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
-    tables = cursor.fetchall()
-    
-    db_info = {}
-    for table in tables:
-        table_name = table[0]
-        cursor.execute(f"SELECT COUNT(*) FROM {table_name}")
-        count = cursor.fetchone()[0]
-        cursor.execute(f"PRAGMA table_info({table_name})")
-        columns = cursor.fetchall()
-        db_info[table_name] = {
-            'count': count,
-            'columns': columns
-        }
-    
-    conn.close()
-    
-    return render_template('debug_db.html', db_info=db_info)
-
 @app.route('/logout')
 def logout():
     session.pop('admin', None)
@@ -126,9 +186,14 @@ def logout():
 
 if __name__ == '__main__':
     # Инициализируем базу данных
-    print("🚀 Инициализация админ-панели...")
     init_db()
     
+    # Создаем папку для медиа если её нет
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+    
+    print("🚀 Запуск расширенной админ-панели...")
+    print("📸 Функционал: просмотр изображений, общение с пользователями")
+    print("🌐 Адрес: http://localhost:5000")
+    
     # Запускаем на всех интерфейсах порт 5000
-    print("🌐 Запуск Flask приложения...")
     app.run(debug=True, host='0.0.0.0', port=5000)
