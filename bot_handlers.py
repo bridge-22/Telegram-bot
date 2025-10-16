@@ -126,6 +126,22 @@ async def handle_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return MAIN_MENU
 
+# Добавьте эту функцию в bot_handlers.py (если её нет)
+async def send_admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE, user_id: int, message: str):
+    """Отправка ответа от администратора пользователю"""
+    try:
+        await context.bot.send_message(
+            chat_id=user_id,
+            text=f"👨‍💼 Ответ от поддержки:\n\n{message}",
+            parse_mode='HTML'
+        )
+        # Сохраняем сообщение в базу
+        save_message(user_id, message, 'text', True)
+        return True, "Сообщение отправлено"
+    except Exception as e:
+        logger.error(f"Ошибка отправки сообщения пользователю {user_id}: {e}")
+        return False, f"Ошибка отправки: {str(e)}"
+
 async def handle_manager_dialog(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработка диалога с менеджером"""
     user_id = update.effective_user.id
