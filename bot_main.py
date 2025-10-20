@@ -37,7 +37,7 @@ def main():
     
     # Токен бота
     BOT_TOKEN = os.environ.get('TELEGRAM_BOT')
-    print("Был установлен ключ: " + BOT_TOKEN)
+    print("Был установлен ключ: ", BOT_TOKEN)
     
     if BOT_TOKEN == 'YOUR_BOT_TOKEN_HERE':
         print("❌ Ошибка: Установите TELEGRAM_BOT_TOKEN в переменных окружения")
