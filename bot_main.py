@@ -4,6 +4,9 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 from bot_handlers import register_handlers, send_message_to_user
 from database import init_db, save_message
 import asyncio
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
 # Настройка логирования
 logging.basicConfig(
@@ -37,7 +40,7 @@ def main():
     
     # Токен бота
     print("Был установлен ключ: ", BOT_TOKEN)
-    BOT_TOKEN = os.environ.get('TELEGRAM_BOT')
+    BOT_TOKEN = os.getenv('TELEGRAM_BOT')
     
     if BOT_TOKEN == 'YOUR_BOT_TOKEN_HERE':
         print("❌ Ошибка: Установите TELEGRAM_BOT_TOKEN в переменных окружения")
