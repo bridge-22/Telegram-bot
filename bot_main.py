@@ -36,7 +36,7 @@ def main():
     init_db()
     
     # Токен бота
-    BOT_TOKEN = "8256261302:AAEGdLaIdoiwFGc0Zagr6A1kvqtErscj7Wo"
+    BOT_TOKEN = os.environ['TELEGRAM_BOT']
     
     if BOT_TOKEN == 'YOUR_BOT_TOKEN_HERE':
         print("❌ Ошибка: Установите TELEGRAM_BOT_TOKEN в переменных окружения")
