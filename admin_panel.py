@@ -285,7 +285,7 @@ app = Flask(__name__)
 app.secret_key = 'admin-secret-key-12345-change-in-production'
 
 # Настройки
-TELEGRAM_BOT_TOKEN = "8256261302:AAEGdLaIdoiwFGc0Zagr6A1kvqtErscj7Wo"
+TELEGRAM_BOT_TOKEN = os.environ['TELEGRAM_BOT']
 UPLOAD_FOLDER = 'media'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
