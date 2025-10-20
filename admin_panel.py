@@ -5,6 +5,8 @@ import hashlib
 import requests
 import json
 from datetime import datetime
+from dotenv import load_dotenv
+load_dotenv()
 
 # Импортируем функции из database.py
 def get_connection():
@@ -285,7 +287,11 @@ app = Flask(__name__)
 app.secret_key = 'admin-secret-key-12345-change-in-production'
 
 # Настройки
-TELEGRAM_BOT_TOKEN = os.environ['TELEGRAM_BOT']
+TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT')
+
+if (TELEGRAM_BOT_TOKEN == ""):
+    print("Ключ для телеграмм бота не был установлен")
+    
 UPLOAD_FOLDER = 'media'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
