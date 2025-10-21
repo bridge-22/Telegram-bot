@@ -4,7 +4,8 @@ apt-get install python3 python3-module-pip python3-venv curl wget build-essentia
 apt-get install python3-module-pip -y
 apt-get install tmux -y 
 pip3 install -r requirements.txt
-cd
+read -p "Path to clone: " clone_path
+cd $clone_path
 git clone https://github.com/bridge-22/Telegram-bot.git
 cd Telegram-bot/
 read -p "Write your telegram-bot token: " token_raw
