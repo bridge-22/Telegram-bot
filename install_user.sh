@@ -1,7 +1,8 @@
 #!/bin/bash
-apt-get install -y gcc python3-devel make libsqlite3-devel git
+apt-get install gcc python3-devel make libsqlite3-devel git -y 
 apt-get install python3 python3-module-pip python3-venv curl wget build-essential libssl-dev libffi-dev python3-dev net-tools sqlite3 -y
-apt-get install -y tmux
+apt-get install python3-module-pip -y
+apt-get install tmux -y 
 pip3 install -r requirements.txt
 cd
 git clone https://github.com/bridge-22/Telegram-bot.git
