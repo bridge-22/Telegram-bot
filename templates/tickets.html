@@ -1,192 +1,504 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
     <title>Tickets</title>
     <meta charset="utf-8">
     <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f6f8fa;
+            --bg-tertiary: #fafbfc;
+            --border-primary: #e1e4e8;
+            --border-secondary: #d1d5da;
+            --text-primary: #24292e;
+            --text-secondary: #586069;
+            --text-tertiary: #6a737d;
+            --accent-color: #0366d6;
+            --accent-hover: #0256c7;
+            --success-color: #28a745;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+            --shadow-hover: 0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23);
+        }
+
+        .dark-theme {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --border-primary: #30363d;
+            --border-secondary: #3b424a;
+            --text-primary: #f0f6fc;
+            --text-secondary: #c9d1d9;
+            --text-tertiary: #8b949e;
+            --accent-color: #58a6ff;
+            --accent-hover: #4493f1;
+            --success-color: #3fb950;
+            --warning-color: #d29922;
+            --danger-color: #f85149;
+            --shadow: 0 1px 3px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.4);
+            --shadow-hover: 0 3px 6px rgba(0,0,0,0.6), 0 3px 6px rgba(0,0,0,0.5);
+        }
+
         body { 
-            font-family: Arial, sans-serif; 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', sans-serif; 
             margin: 0; 
             padding: 0;
-            background: #f0f2f5;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            transition: background-color 0.3s, color 0.3s;
         }
+
         .header { 
-            background: white; 
-            padding: 20px; 
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
+            background: var(--bg-secondary); 
+            padding: 16px 0;
+            border-bottom: 1px solid var(--border-primary);
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav { 
+            display: flex;
+            gap: 8px;
+        }
+
         .nav a { 
-            margin-right: 20px; 
             text-decoration: none; 
-            color: #007cba;
-            font-weight: bold;
-            padding: 8px 16px;
-            border-radius: 4px;
+            color: var(--text-secondary);
+            font-weight: 500;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: background-color 0.2s, color 0.2s;
         }
+
         .nav a:hover {
-            background: #f0f8ff;
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
         }
+
+        .nav a.active {
+            background: var(--accent-color);
+            color: white;
+        }
+
         .container {
-            max-width: 1200px;
+            max-width: 1280px;
             margin: 0 auto;
-            padding: 0 20px;
+            padding: 0 16px;
         }
+
+        .theme-toggle {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-primary);
+            border-radius: 6px;
+            padding: 8px 12px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: background-color 0.2s;
+        }
+
+        .theme-toggle:hover {
+            background: var(--bg-secondary);
+        }
+
+        .logout-btn {
+            color: var(--danger-color) !important;
+        }
+
+        .logout-btn:hover {
+            background: rgba(220, 53, 69, 0.1) !important;
+        }
+
+        .filter-info {
+            background: var(--bg-secondary);
+            padding: 20px;
+            border-radius: 6px;
+            border: 1px solid var(--border-primary);
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+        }
+
+        .filter-info h3 {
+            margin: 0 0 8px 0;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .filter-info p {
+            margin: 0;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
         .ticket { 
-            background: white; 
+            background: var(--bg-secondary); 
             padding: 20px; 
-            margin: 15px 0; 
-            border-radius: 8px; 
-            border-left: 4px solid #007cba;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin: 0 0 16px 0; 
+            border-radius: 6px; 
+            border: 1px solid var(--border-primary);
+            box-shadow: var(--shadow);
+            transition: transform 0.2s, box-shadow 0.2s;
         }
+
+        .ticket:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-hover);
+        }
+
         .ticket-header { 
             display: flex; 
             justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
+            align-items: flex-start;
+            margin-bottom: 12px;
         }
+
         .ticket-actions { 
-            margin-top: 15px; 
+            margin-top: 16px; 
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
         }
+
         button { 
             padding: 8px 16px; 
-            margin-right: 10px; 
             cursor: pointer; 
             border: none;
-            border-radius: 4px;
-            font-weight: bold;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 14px;
+            transition: background-color 0.2s;
         }
+
         .btn-resolved {
-            background: #28a745;
+            background: var(--success-color);
             color: white;
         }
+
+        .btn-resolved:hover {
+            background: #218838;
+        }
+
         .btn-progress {
-            background: #ffc107;
-            color: black;
+            background: var(--warning-color);
+            color: #212529;
         }
+
+        .btn-progress:hover {
+            background: #e0a800;
+        }
+
         .btn-open {
-            background: #dc3545;
+            background: var(--danger-color);
             color: white;
         }
+
+        .btn-open:hover {
+            background: #c82333;
+        }
+
+        .btn-message {
+            background: var(--accent-color);
+            color: white;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            display: inline-block;
+            transition: background-color 0.2s;
+        }
+
+        .btn-message:hover {
+            background: var(--accent-hover);
+            color: white;
+        }
+
         .status-badge {
             padding: 4px 12px;
             border-radius: 12px;
             font-size: 12px;
-            font-weight: bold;
+            font-weight: 600;
+            display: inline-block;
         }
-        .status-open { background: #ffe6e6; color: #dc3545; }
-        .status-in_progress { background: #fff3cd; color: #856404; }
-        .status-resolved { background: #e6f4ea; color: #28a745; }
+
+        .status-open { 
+            background: rgba(220, 53, 69, 0.1); 
+            color: var(--danger-color); 
+            border: 1px solid rgba(220, 53, 69, 0.2);
+        }
+        .status-in_progress { 
+            background: rgba(255, 193, 7, 0.1); 
+            color: var(--warning-color); 
+            border: 1px solid rgba(255, 193, 7, 0.2);
+        }
+        .status-resolved { 
+            background: rgba(40, 167, 69, 0.1); 
+            color: var(--success-color); 
+            border: 1px solid rgba(40, 167, 69, 0.2);
+        }
+
+        .ticket-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin: 8px 0;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .ticket-user {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .username {
+            color: var(--text-tertiary);
+            font-size: 14px;
+        }
+
+        .ticket-description {
+            margin-top: 12px;
+            color: var(--text-primary);
+            line-height: 1.5;
+            font-size: 14px;
+        }
+
+        .ticket-id {
+            font-weight: 600;
+            color: var(--accent-color);
+            text-decoration: none;
+        }
+
+        .ticket-id:hover {
+            text-decoration: underline;
+        }
+
+        .empty-state {
+            background: var(--bg-secondary);
+            padding: 60px 20px;
+            text-align: center;
+            border-radius: 6px;
+            border: 1px solid var(--border-primary);
+            color: var(--text-tertiary);
+        }
+
+        .empty-state h3 {
+            margin: 0 0 8px 0;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .empty-state p {
+            margin: 0;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
     <div class="header">
         <div class="container">
-            <h1>🎫 Управление тикетами</h1>
-            <div class="nav">
-                <a href="/dashboard">📊 Дашборд</a>
-                <a href="/tickets">🎫 Все тикеты</a>
-                <a href="/tickets?status=open">⚠️ Открытые</a>
-                <a href="/tickets?status=resolved">✅ Решенные</a>
-                <a href="/logout" style="color: #ff4444;">🚪 Выйти</a>
-            </div>
-        </div>
-    </div>
-    
-  <!-- ЗАМЕНИТЕ этот блок в tickets.html -->
-<div class="container">
-    <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-        <h3>Фильтр: 
-            {% if status == 'all' %}Все тикеты ({{ tickets|length }})
-            {% elif status == 'open' %}Открытые ({{ tickets|length }})
-            {% elif status == 'resolved' %}Решенные ({{ tickets|length }})
-            {% else %}Все тикеты ({{ tickets|length }})
-            {% endif %}
-        </h3>
-        <p><small>💡 <strong>Чтобы отправить сообщение пользователю, нажмите на номер тикета</strong></small></p>
-    </div>
-    
-    {% if tickets %}
-        {% for ticket in tickets %}
-        <div class="ticket">
-            <div class="ticket-header">
-                <div>
-                    <strong>
-                        <a href="/ticket/{{ ticket.id }}" style="text-decoration: none; color: #007cba; font-size: 1.2em;">
-                            🔗 #{{ ticket.id }}
-                        </a> - 
-                        {% if ticket.first_name %}{{ ticket.first_name }}
-                        {% else %}User#{{ ticket.user_id }}
-                        {% endif %}
-                        ({{ ticket.username or 'N/A' }})
-                    </strong>
+            <div class="header-content">
+                <h1>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M20 6h-4V4c0-1.1-.9-2-2-2h-4c-1.1 0-2 .9-2 2v2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zM10 4h4v2h-4V4zm10 16H4V8h16v12z"/>
+                    </svg>
+                    Управление тикетами
+                </h1>
+                <div style="display: flex; align-items: center; gap: 16px;">
+                    <button class="theme-toggle" id="themeToggle">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/>
+                        </svg>
+                        Тема
+                    </button>
+                    <div class="nav">
+                        <a href="/dashboard">📊 Дашборд</a>
+                        <a href="/tickets" class="active">🎫 Все тикеты</a>
+                        <a href="/tickets?status=open">⚠️ Открытые</a>
+                        <a href="/tickets?status=resolved">✅ Решенные</a>
+                        <a href="/logout" class="logout-btn">🚪 Выйти</a>
+                    </div>
                 </div>
-                <span class="status-badge status-{{ ticket.status }}">
-                    {% if ticket.status == 'open' %}⚠️ Открыт
-                    {% elif ticket.status == 'in_progress' %}🔄 В работе
-                    {% elif ticket.status == 'resolved' %}✅ Решен
-                    {% else %}{{ ticket.status }}
-                    {% endif %}
-                </span>
             </div>
-            <p><strong>📋 Тип:</strong> 
-                {% if ticket.ticket_type == 'manager_request' %}👨‍💼 Обращение к менеджеру
-                {% elif ticket.ticket_type == 'violation_report' %}⚠️ Отчет о нарушении
-                {% else %}{{ ticket.ticket_type }}
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="filter-info">
+            <h3>
+                Фильтр: 
+                {% if status == 'all' %}Все тикеты ({{ tickets|length }})
+                {% elif status == 'open' %}Открытые ({{ tickets|length }})
+                {% elif status == 'resolved' %}Решенные ({{ tickets|length }})
+                {% else %}Все тикеты ({{ tickets|length }})
                 {% endif %}
-            </p>
-            <p><strong>📝 Описание:</strong> {{ ticket.description }}</p>
-            <p><strong>🕒 Создан:</strong> {{ ticket.created_at }}</p>
-            {% if ticket.resolved_at %}
-            <p><strong>✅ Решен:</strong> {{ ticket.resolved_at }}</p>
-            {% endif %}
-            {% if ticket.admin_notes %}
-            <p><strong>💬 Заметки админа:</strong> {{ ticket.admin_notes }}</p>
-            {% endif %}
-            
-            <div class="ticket-actions">
-                <a href="/ticket/{{ ticket.id }}" style="background: #007cba; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; margin-right: 10px;">
-                    💬 Написать пользователю
-                </a>
+            </h3>
+            <p>💡 <strong>Чтобы отправить сообщение пользователю, нажмите на номер тикета</strong></p>
+        </div>
+        
+        {% if tickets %}
+            {% for ticket in tickets %}
+            <div class="ticket">
+                <div class="ticket-header">
+                    <div>
+                        <div class="ticket-user">
+                            <strong>
+                                <a href="/ticket/{{ ticket.id }}" class="ticket-id">
+                                    #{{ ticket.id }}
+                                </a> - 
+                                {% if ticket.first_name %}{{ ticket.first_name }}
+                                {% else %}User#{{ ticket.user_id }}
+                                {% endif %}
+                            </strong>
+                            <span class="username">@{{ ticket.username or 'N/A' }}</span>
+                        </div>
+                        <div class="ticket-meta">
+                            <span>
+                                📋 Тип: 
+                                {% if ticket.ticket_type == 'manager_request' %}👨‍💼 Обращение к менеджеру
+                                {% elif ticket.ticket_type == 'violation_report' %}⚠️ Отчет о нарушении
+                                {% else %}{{ ticket.ticket_type }}
+                                {% endif %}
+                            </span>
+                            <span>🕒 Создан: {{ ticket.created_at }}</span>
+                        </div>
+                    </div>
+                    <span class="status-badge status-{{ ticket.status }}">
+                        {% if ticket.status == 'open' %}⚠️ Открыт
+                        {% elif ticket.status == 'in_progress' %}🔄 В работе
+                        {% elif ticket.status == 'resolved' %}✅ Решен
+                        {% else %}{{ ticket.status }}
+                        {% endif %}
+                    </span>
+                </div>
                 
-                {% if ticket.status != 'resolved' %}
-                <button class="btn-resolved" onclick="updateTicket({{ ticket.id }}, 'resolved')">✅ Отметить решенным</button>
+                <div class="ticket-description">
+                    {{ ticket.description }}
+                </div>
+                
+                {% if ticket.resolved_at %}
+                <div class="ticket-meta">
+                    <span>✅ Решен: {{ ticket.resolved_at }}</span>
+                </div>
                 {% endif %}
-                {% if ticket.status != 'in_progress' %}
-                <button class="btn-progress" onclick="updateTicket({{ ticket.id }}, 'in_progress')">🔄 В работу</button>
+                
+                {% if ticket.admin_notes %}
+                <div style="margin-top: 12px; padding: 12px; background: var(--bg-tertiary); border-radius: 6px;">
+                    <strong>💬 Заметки админа:</strong> {{ ticket.admin_notes }}
+                </div>
                 {% endif %}
-                {% if ticket.status != 'open' %}
-                <button class="btn-open" onclick="updateTicket({{ ticket.id }}, 'open')">⚠️ Открыть снова</button>
-                {% endif %}
+                
+                <div class="ticket-actions">
+                    <a href="/ticket/{{ ticket.id }}" class="btn-message">
+                        💬 Написать пользователю
+                    </a>
+                    
+                    {% if ticket.status != 'resolved' %}
+                    <button class="btn-resolved" onclick="updateTicket({{ ticket.id }}, 'resolved')">✅ Отметить решенным</button>
+                    {% endif %}
+                    {% if ticket.status != 'in_progress' %}
+                    <button class="btn-progress" onclick="updateTicket({{ ticket.id }}, 'in_progress')">🔄 В работу</button>
+                    {% endif %}
+                    {% if ticket.status != 'open' %}
+                    <button class="btn-open" onclick="updateTicket({{ ticket.id }}, 'open')">⚠️ Открыть снова</button>
+                    {% endif %}
+                </div>
             </div>
-        </div>
-        {% endfor %}
-    {% else %}
-        <div style="background: white; padding: 40px; text-align: center; border-radius: 8px;">
-            <h3>😔 Тикетов нет</h3>
-            <p>Нет тикетов для отображения по выбранному фильтру "{{ status }}"</p>
-        </div>
-    {% endif %}
-</div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <h3>😔 Тикетов нет</h3>
+                <p>Нет тикетов для отображения по выбранному фильтру "{{ status }}"</p>
+            </div>
+        {% endif %}
+    </div>
 
     <script>
-    function updateTicket(ticketId, status) {
-        if (confirm('Изменить статус тикета?')) {
-            fetch('/api/tickets/' + ticketId, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: status })
-            }).then(response => {
-                if (response.ok) {
-                    location.reload();
-                } else {
-                    alert('Ошибка при обновлении тикета');
-                }
-            });
+        // Функция для переключения темы
+        function toggleTheme() {
+            const body = document.body;
+            const themeToggle = document.getElementById('themeToggle');
+            
+            if (body.classList.contains('dark-theme')) {
+                body.classList.remove('dark-theme');
+                localStorage.setItem('theme', 'light');
+                themeToggle.innerHTML = `
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/>
+                    </svg>
+                    Тема
+                `;
+            } else {
+                body.classList.add('dark-theme');
+                localStorage.setItem('theme', 'dark');
+                themeToggle.innerHTML = `
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 9c1.65 0 3 1.35 3 3s-1.35 3-3 3-3-1.35-3-3 1.35-3 3-3z"/>
+                        <path d="M20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12 20 8.69zm-2 5.79V18h-3.52L12 20.48 9.52 18H6v-3.52L3.52 12 6 9.52V6h3.52L12 3.52 14.48 6H18v3.52L20.48 12 18 14.48z"/>
+                    </svg>
+                    Тема
+                `;
+            }
         }
-    }
+
+        // Применение сохраненной темы при загрузке
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedTheme = localStorage.getItem('theme');
+            const themeToggle = document.getElementById('themeToggle');
+            
+            if (savedTheme === 'dark') {
+                document.body.classList.add('dark-theme');
+                themeToggle.innerHTML = `
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 9c1.65 0 3 1.35 3 3s-1.35 3-3 3-3-1.35-3-3 1.35-3 3-3z"/>
+                        <path d="M20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12 20 8.69zm-2 5.79V18h-3.52L12 20.48 9.52 18H6v-3.52L3.52 12 6 9.52V6h3.52L12 3.52 14.48 6H18v3.52L20.48 12 18 14.48z"/>
+                    </svg>
+                    Тема
+                `;
+            }
+            
+            themeToggle.addEventListener('click', toggleTheme);
+        });
+
+        // Функция обновления статуса тикета
+        function updateTicket(ticketId, status) {
+            if (confirm('Изменить статус тикета?')) {
+                fetch('/api/tickets/' + ticketId, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: status })
+                }).then(response => {
+                    if (response.ok) {
+                        location.reload();
+                    } else {
+                        alert('Ошибка при обновлении тикета');
+                    }
+                });
+            }
+        }
     </script>
 </body>
 </html>
-
