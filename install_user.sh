@@ -7,6 +7,8 @@ pip3 install -r requirements.txt
 cd
 git clone https://github.com/bridge-22/Telegram-bot.git
 cd Telegram-bot/
+read -p "Write your telegram-bot token: " token
+echo "TELEGRAM_BOT="$token"" > .env
 tmux new-session -d -s myscripts 'python3 bot_main.py'
 tmux new-window -t myscripts 'python3 admin_panel.py'
 echo "To show scripts console: tmux attach -t myscripts"
