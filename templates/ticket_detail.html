@@ -1,127 +1,435 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
     <title>Тикет #{{ ticket.id }}</title>
     <meta charset="utf-8">
     <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f6f8fa;
+            --bg-tertiary: #fafbfc;
+            --border-primary: #e1e4e8;
+            --border-secondary: #d1d5da;
+            --text-primary: #24292e;
+            --text-secondary: #586069;
+            --text-tertiary: #6a737d;
+            --accent-color: #0366d6;
+            --accent-hover: #0256c7;
+            --success-color: #28a745;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+            --shadow-hover: 0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23);
+        }
+
+        .dark-theme {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --border-primary: #30363d;
+            --border-secondary: #3b424a;
+            --text-primary: #f0f6fc;
+            --text-secondary: #c9d1d9;
+            --text-tertiary: #8b949e;
+            --accent-color: #58a6ff;
+            --accent-hover: #4493f1;
+            --success-color: #3fb950;
+            --warning-color: #d29922;
+            --danger-color: #f85149;
+            --shadow: 0 1px 3px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.4);
+            --shadow-hover: 0 3px 6px rgba(0,0,0,0.6), 0 3px 6px rgba(0,0,0,0.5);
+        }
+
         body { 
-            font-family: Arial, sans-serif; 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', sans-serif; 
             margin: 0; 
             padding: 0;
-            background: #f0f2f5;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            transition: background-color 0.3s, color 0.3s;
         }
+
         .header { 
-            background: white; 
-            padding: 20px; 
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
+            background: var(--bg-secondary); 
+            padding: 16px 0;
+            border-bottom: 1px solid var(--border-primary);
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
+
+        .header h1 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav { 
+            display: flex;
+            gap: 8px;
+        }
+
         .nav a { 
-            margin-right: 20px; 
             text-decoration: none; 
-            color: #007cba;
-            font-weight: bold;
-            padding: 8px 16px;
-            border-radius: 4px;
+            color: var(--text-secondary);
+            font-weight: 500;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: background-color 0.2s, color 0.2s;
         }
+
         .nav a:hover {
-            background: #f0f8ff;
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
         }
+
+        .container {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0 16px;
+        }
+
+        .theme-toggle {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-primary);
+            border-radius: 6px;
+            padding: 8px 12px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: background-color 0.2s;
+        }
+
+        .theme-toggle:hover {
+            background: var(--bg-secondary);
+        }
+
+        .logout-btn {
+            color: var(--danger-color) !important;
+        }
+
+        .logout-btn:hover {
+            background: rgba(220, 53, 69, 0.1) !important;
+        }
+
         .ticket-info {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
+            background: var(--bg-secondary);
+            padding: 24px;
+            border-radius: 6px;
+            border: 1px solid var(--border-primary);
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 16px;
             margin-bottom: 20px;
         }
-        .media-gallery {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
         }
-        .conversation {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
+
+        .info-label {
+            font-size: 14px;
+            color: var(--text-secondary);
+            font-weight: 500;
         }
-        .message-form {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
+
+        .info-value {
+            font-size: 16px;
+            color: var(--text-primary);
         }
-        .media-item {
+
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
             display: inline-block;
-            margin: 10px;
-            vertical-align: top;
         }
+
+        .status-open { 
+            background: rgba(220, 53, 69, 0.1); 
+            color: var(--danger-color); 
+            border: 1px solid rgba(220, 53, 69, 0.2);
+        }
+        .status-in_progress { 
+            background: rgba(255, 193, 7, 0.1); 
+            color: var(--warning-color); 
+            border: 1px solid rgba(255, 193, 7, 0.2);
+        }
+        .status-resolved { 
+            background: rgba(40, 167, 69, 0.1); 
+            color: var(--success-color); 
+            border: 1px solid rgba(40, 167, 69, 0.2);
+        }
+
+        .ticket-actions {
+            margin-top: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        button { 
+            padding: 8px 16px; 
+            cursor: pointer; 
+            border: none;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+
+        .btn-resolved {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .btn-resolved:hover {
+            background: #218838;
+        }
+
+        .btn-progress {
+            background: var(--warning-color);
+            color: #212529;
+        }
+
+        .btn-progress:hover {
+            background: #e0a800;
+        }
+
+        .btn-open {
+            background: var(--danger-color);
+            color: white;
+        }
+
+        .btn-open:hover {
+            background: #c82333;
+        }
+
+        .media-gallery {
+            background: var(--bg-secondary);
+            padding: 24px;
+            border-radius: 6px;
+            border: 1px solid var(--border-primary);
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+        }
+
+        .media-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+        }
+
+        .media-item {
+            border: 1px solid var(--border-primary);
+            border-radius: 6px;
+            overflow: hidden;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .media-item:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-hover);
+        }
+
         .media-image {
-            max-width: 300px;
-            max-height: 200px;
-            border-radius: 8px;
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            display: block;
         }
+
+        .media-caption {
+            padding: 8px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            background: var(--bg-tertiary);
+        }
+
+        .conversation {
+            background: var(--bg-secondary);
+            padding: 24px;
+            border-radius: 6px;
+            border: 1px solid var(--border-primary);
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+        }
+
+        .message-form {
+            background: var(--bg-secondary);
+            padding: 24px;
+            border-radius: 6px;
+            border: 1px solid var(--border-primary);
+            box-shadow: var(--shadow);
+        }
+
         .message {
-            padding: 10px;
-            margin: 10px 0;
-            border-radius: 8px;
+            padding: 16px;
+            margin: 12px 0;
+            border-radius: 6px;
+            border: 1px solid var(--border-primary);
         }
+
         .message-admin {
-            background: #e3f2fd;
-            margin-left: 50px;
+            background: rgba(3, 102, 214, 0.05);
+            border-left: 4px solid var(--accent-color);
+            margin-left: 30px;
         }
+
         .message-user {
-            background: #f5f5f5;
-            margin-right: 50px;
+            background: var(--bg-tertiary);
+            border-left: 4px solid var(--border-secondary);
+            margin-right: 30px;
         }
+
         .message-sender {
-            font-weight: bold;
-            margin-bottom: 5px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
         }
+
+        .message-time {
+            font-size: 12px;
+            color: var(--text-tertiary);
+            font-weight: normal;
+        }
+
+        .message-text {
+            line-height: 1.5;
+            font-size: 14px;
+        }
+
         textarea {
             width: 100%;
-            height: 100px;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+            height: 120px;
+            padding: 12px;
+            border: 1px solid var(--border-primary);
+            border-radius: 6px;
             resize: vertical;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 14px;
+            transition: border-color 0.2s, box-shadow 0.2s;
         }
-        button {
-            background: #007cba;
+
+        textarea:focus {
+            border-color: var(--accent-color);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(3, 102, 214, 0.3);
+        }
+
+        .btn-send {
+            background: var(--accent-color);
             color: white;
             padding: 10px 20px;
             border: none;
-            border-radius: 4px;
+            border-radius: 6px;
             cursor: pointer;
-            margin-top: 10px;
+            margin-top: 12px;
+            font-weight: 500;
+            font-size: 14px;
+            transition: background-color 0.2s;
         }
-        button:hover {
-            background: #005a87;
+
+        .btn-send:hover {
+            background: var(--accent-hover);
         }
-        .status-badge {
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: bold;
-            display: inline-block;
+
+        .message-result {
+            margin-top: 12px;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 14px;
         }
-        .status-open { background: #ffe6e6; color: #dc3545; }
-        .status-in_progress { background: #fff3cd; color: #856404; }
-        .status-resolved { background: #e6f4ea; color: #28a745; }
+
+        .success {
+            background: rgba(40, 167, 69, 0.1);
+            color: var(--success-color);
+            border: 1px solid rgba(40, 167, 69, 0.2);
+        }
+
+        .error {
+            background: rgba(220, 53, 69, 0.1);
+            color: var(--danger-color);
+            border: 1px solid rgba(220, 53, 69, 0.2);
+        }
+
+        .empty-state {
+            padding: 40px 20px;
+            text-align: center;
+            color: var(--text-tertiary);
+        }
+
+        .empty-state h3 {
+            margin: 0 0 8px 0;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .empty-state p {
+            margin: 0;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
     <div class="header">
         <div class="container">
-            <h1>🎫 Тикет #{{ ticket.id }} - {{ ticket.first_name }}</h1>
-            <div class="nav">
-                <a href="/dashboard">📊 Дашборд</a>
-                <a href="/tickets">🎫 Все тикеты</a>
-                <a href="/logout">🚪 Выйти</a>
+            <div class="header-content">
+                <h1>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M20 6h-4V4c0-1.1-.9-2-2-2h-4c-1.1 0-2 .9-2 2v2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zM10 4h4v2h-4V4zm10 16H4V8h16v12z"/>
+                    </svg>
+                    Тикет #{{ ticket.id }} - {{ ticket.first_name }}
+                </h1>
+                <div style="display: flex; align-items: center; gap: 16px;">
+                    <button class="theme-toggle" id="themeToggle">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/>
+                        </svg>
+                        Тема
+                    </button>
+                    <div class="nav">
+                        <a href="/dashboard">📊 Дашборд</a>
+                        <a href="/tickets">🎫 Все тикеты</a>
+                        <a href="/logout" class="logout-btn">🚪 Выйти</a>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -129,37 +437,79 @@
     <div class="container">
         <!-- Информация о тикете -->
         <div class="ticket-info">
-            <h2>📋 Информация о тикете</h2>
-            <p><strong>👤 Пользователь:</strong> {{ ticket.first_name }} ({{ ticket.username or 'N/A' }})</p>
-            <p><strong>🆔 User ID:</strong> {{ ticket.user_id }}</p>
-            <p><strong>📝 Тип:</strong> 
-                {% if ticket.ticket_type == 'manager_request' %}👨‍💼 Обращение к менеджеру
-                {% elif ticket.ticket_type == 'violation_report' %}⚠️ Отчет о нарушении
-                {% else %}{{ ticket.ticket_type }}
+            <h2 class="section-title">📋 Информация о тикете</h2>
+            
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="info-label">👤 Пользователь</span>
+                    <span class="info-value">{{ ticket.first_name }} ({{ ticket.username or 'N/A' }})</span>
+                </div>
+                
+                <div class="info-item">
+                    <span class="info-label">🆔 User ID</span>
+                    <span class="info-value">{{ ticket.user_id }}</span>
+                </div>
+                
+                <div class="info-item">
+                    <span class="info-label">📝 Тип</span>
+                    <span class="info-value">
+                        {% if ticket.ticket_type == 'manager_request' %}👨‍💼 Обращение к менеджеру
+                        {% elif ticket.ticket_type == 'violation_report' %}⚠️ Отчет о нарушении
+                        {% else %}{{ ticket.ticket_type }}
+                        {% endif %}
+                    </span>
+                </div>
+                
+                <div class="info-item">
+                    <span class="info-label">📊 Статус</span>
+                    <span class="status-badge status-{{ ticket.status }}">
+                        {% if ticket.status == 'open' %}⚠️ Открыт
+                        {% elif ticket.status == 'in_progress' %}🔄 В работе
+                        {% elif ticket.status == 'resolved' %}✅ Решен
+                        {% else %}{{ ticket.status }}
+                        {% endif %}
+                    </span>
+                </div>
+                
+                <div class="info-item">
+                    <span class="info-label">🕒 Создан</span>
+                    <span class="info-value">{{ ticket.created_at }}</span>
+                </div>
+                
+                {% if ticket.resolved_at %}
+                <div class="info-item">
+                    <span class="info-label">✅ Решен</span>
+                    <span class="info-value">{{ ticket.resolved_at }}</span>
+                </div>
                 {% endif %}
-            </p>
-            <p><strong>📄 Описание:</strong> {{ ticket.description }}</p>
-            <p><strong>🕒 Создан:</strong> {{ ticket.created_at }}</p>
-            <p><strong>📊 Статус:</strong> 
-                <span class="status-badge status-{{ ticket.status }}">
-                    {% if ticket.status == 'open' %}⚠️ Открыт
-                    {% elif ticket.status == 'in_progress' %}🔄 В работе
-                    {% elif ticket.status == 'resolved' %}✅ Решен
-                    {% else %}{{ ticket.status }}
-                    {% endif %}
-                </span>
-            </p>
+            </div>
+            
+            <div class="info-item" style="margin-top: 16px;">
+                <span class="info-label">📄 Описание</span>
+                <div class="info-value" style="padding: 12px; background: var(--bg-tertiary); border-radius: 6px; margin-top: 8px;">
+                    {{ ticket.description }}
+                </div>
+            </div>
+            
+            {% if ticket.admin_notes %}
+            <div class="info-item" style="margin-top: 16px;">
+                <span class="info-label">💬 Заметки админа</span>
+                <div class="info-value" style="padding: 12px; background: rgba(3, 102, 214, 0.05); border-radius: 6px; margin-top: 8px;">
+                    {{ ticket.admin_notes }}
+                </div>
+            </div>
+            {% endif %}
             
             <div class="ticket-actions">
-                <h3>Действия с тикетом:</h3>
+                <h3 style="margin: 0; font-size: 16px; width: 100%;">Действия с тикетом:</h3>
                 {% if ticket.status != 'resolved' %}
-                <button onclick="updateTicketStatus('resolved')">✅ Отметить решенным</button>
+                <button class="btn-resolved" onclick="updateTicketStatus('resolved')">✅ Отметить решенным</button>
                 {% endif %}
                 {% if ticket.status != 'in_progress' %}
-                <button onclick="updateTicketStatus('in_progress')">🔄 В работу</button>
+                <button class="btn-progress" onclick="updateTicketStatus('in_progress')">🔄 В работу</button>
                 {% endif %}
                 {% if ticket.status != 'open' %}
-                <button onclick="updateTicketStatus('open')">⚠️ Открыть снова</button>
+                <button class="btn-open" onclick="updateTicketStatus('open')">⚠️ Открыть снова</button>
                 {% endif %}
             </div>
         </div>
@@ -167,172 +517,209 @@
         <!-- Медиафайлы -->
         {% if media_files %}
         <div class="media-gallery">
-            <h2>📸 Прикрепленные файлы</h2>
-            {% for media in media_files %}
-            <div class="media-item">
-                {% if media.file_type == 'photo' %}
-                <a href="/media/{{ media.file_path }}" target="_blank">
-                    <img src="/media/{{ media.file_path }}" alt="Фото" class="media-image">
-                </a>
-                {% elif media.file_type == 'video' %}
-                <video controls width="300" class="media-image">
-                    <source src="/media/{{ media.file_path }}" type="video/mp4">
-                    Ваш браузер не поддерживает видео.
-                </video>
-                {% else %}
-                <div style="padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
-                    <strong>📎 Файл:</strong> {{ media.file_path }}<br>
-                    <a href="/media/{{ media.file_path }}" target="_blank">Скачать</a>
+            <h2 class="section-title">📸 Прикрепленные файлы</h2>
+            <div class="media-grid">
+                {% for media in media_files %}
+                <div class="media-item">
+                    {% if media.file_type == 'photo' %}
+                    <a href="/media/{{ media.file_path }}" target="_blank">
+                        <img src="/media/{{ media.file_path }}" alt="Фото" class="media-image">
+                    </a>
+                    {% elif media.file_type == 'video' %}
+                    <video controls class="media-image">
+                        <source src="/media/{{ media.file_path }}" type="video/mp4">
+                        Ваш браузер не поддерживает видео.
+                    </video>
+                    {% else %}
+                    <div style="padding: 20px; text-align: center; background: var(--bg-tertiary);">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor" style="color: var(--text-tertiary);">
+                            <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+                        </svg>
+                        <div style="margin-top: 8px; font-size: 12px;">
+                            <a href="/media/{{ media.file_path }}" target="_blank">Скачать файл</a>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% if media.caption %}
+                    <div class="media-caption">{{ media.caption }}</div>
+                    {% endif %}
                 </div>
-                {% endif %}
-                {% if media.caption %}
-                <p><small>{{ media.caption }}</small></p>
-                {% endif %}
+                {% endfor %}
             </div>
-            {% endfor %}
         </div>
         {% endif %}
 
         <!-- История переписки -->
         <div class="conversation">
-            <h2>💬 История переписки</h2>
+            <h2 class="section-title">💬 История переписки</h2>
             <div id="conversation-container">
                 {% for message in conversation %}
                 <div class="message {% if message.is_from_admin %}message-admin{% else %}message-user{% endif %}">
                     <div class="message-sender">
                         {% if message.is_from_admin %}👨‍💼 Администратор{% else %}👤 Пользователь{% endif %}
-                        <small>{{ message.timestamp }}</small>
+                        <span class="message-time">{{ message.timestamp }}</span>
                     </div>
-                    <div>{{ message.message_text }}</div>
+                    <div class="message-text">{{ message.message_text }}</div>
                 </div>
                 {% else %}
-                <p>Нет сообщений</p>
+                <div class="empty-state">
+                    <h3>💭 Нет сообщений</h3>
+                    <p>Начните общение с пользователем</p>
+                </div>
                 {% endfor %}
             </div>
         </div>
 
         <!-- Форма отправки сообщения -->
         <div class="message-form">
-            <h2>✉️ Отправить сообщение</h2>
+            <h2 class="section-title">✉️ Отправить сообщение</h2>
             <textarea id="message-text" placeholder="Введите ваше сообщение..."></textarea>
             <br>
-            <button onclick="sendMessage()">📤 Отправить сообщение</button>
-            <div id="message-result" style="margin-top: 10px;"></div>
+            <button class="btn-send" onclick="sendMessage()">📤 Отправить сообщение</button>
+            <div id="message-result" class="message-result"></div>
         </div>
     </div>
 
     <script>
-    function updateTicketStatus(status) {
-        if (confirm('Изменить статус тикета?')) {
-            fetch('/api/tickets/{{ ticket.id }}', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: status })
-            }).then(response => {
-                if (response.ok) {
-                    location.reload();
-                } else {
-                    alert('Ошибка при обновлении статуса');
-                }
-            });
-        }
-    }
-
-    function sendMessage() {
-        const messageText = document.getElementById('message-text').value.trim();
-        const resultDiv = document.getElementById('message-result');
-        
-        if (!messageText) {
-            resultDiv.innerHTML = '<span style="color: red;">Введите текст сообщения</span>';
-            return;
-        }
-
-        fetch('/api/ticket/{{ ticket.id }}/send_message', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: messageText })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                resultDiv.innerHTML = '<span style="color: green;">✅ ' + data.message + '</span>';
-                document.getElementById('message-text').value = '';
-                // Обновляем историю переписки
-                loadConversation();
-            } else {
-                resultDiv.innerHTML = '<span style="color: red;">❌ ' + data.error + '</span>';
-            }
-        })
-        .catch(error => {
-            resultDiv.innerHTML = '<span style="color: red;">❌ Ошибка отправки: ' + error + '</span>';
-        });
-    }
-
-    function loadConversation() {
-        fetch('/api/ticket/{{ ticket.id }}/conversation')
-        .then(response => response.json())
-        .then(messages => {
-            const container = document.getElementById('conversation-container');
-            container.innerHTML = '';
+        // Функция для переключения темы
+        function toggleTheme() {
+            const body = document.body;
+            const themeToggle = document.getElementById('themeToggle');
             
-            messages.forEach(message => {
-                const messageDiv = document.createElement('div');
-                messageDiv.className = `message ${message.is_from_admin ? 'message-admin' : 'message-user'}`;
-                
-                messageDiv.innerHTML = `
-                    <div class="message-sender">
-                        ${message.is_from_admin ? '👨‍💼 Администратор' : '👤 Пользователь'}
-                        <small>${message.timestamp}</small>
-                    </div>
-                    <div>${message.message_text}</div>
+            if (body.classList.contains('dark-theme')) {
+                body.classList.remove('dark-theme');
+                localStorage.setItem('theme', 'light');
+                themeToggle.innerHTML = `
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/>
+                    </svg>
+                    Тема
                 `;
-                
-                container.appendChild(messageDiv);
-            });
-        });
-    }
-
-    // Автообновление переписки каждые 10 секунд
-    setInterval(loadConversation, 10000);
-
-    // В секции <script> добавьте более подробное логирование
-    function sendMessage() {
-        const messageText = document.getElementById('message-text').value.trim();
-        const resultDiv = document.getElementById('message-result');
-        
-        if (!messageText) {
-            resultDiv.innerHTML = '<span style="color: red;">Введите текст сообщения</span>';
-            return;
-        }
-    
-        console.log(`Отправка сообщения для тикета {{ ticket.id }}, пользователь: {{ ticket.user_id }}`);
-    
-        fetch('/api/ticket/{{ ticket.id }}/send_message', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: messageText })
-        })
-        .then(response => {
-            console.log('Response status:', response.status);
-            return response.json().then(data => {
-                return { ok: response.ok, data: data };
-            });
-        })
-        .then(({ ok, data }) => {
-            console.log('Response data:', data);
-            if (ok && data.success) {
-                resultDiv.innerHTML = '<span style="color: green;">✅ ' + data.message + '</span>';
-                document.getElementById('message-text').value = '';
-                loadConversation();
             } else {
-                resultDiv.innerHTML = '<span style="color: red;">❌ ' + (data.error || 'Неизвестная ошибка') + '</span>';
+                body.classList.add('dark-theme');
+                localStorage.setItem('theme', 'dark');
+                themeToggle.innerHTML = `
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 9c1.65 0 3 1.35 3 3s-1.35 3-3 3-3-1.35-3-3 1.35-3 3-3z"/>
+                        <path d="M20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12 20 8.69zm-2 5.79V18h-3.52L12 20.48 9.52 18H6v-3.52L3.52 12 6 9.52V6h3.52L12 3.52 14.48 6H18v3.52L20.48 12 18 14.48z"/>
+                    </svg>
+                    Тема
+                `;
             }
-        })
-        .catch(error => {
-            console.error('Fetch error:', error);
-            resultDiv.innerHTML = '<span style="color: red;">❌ Ошибка отправки: ' + error + '</span>';
+        }
+
+        // Применение сохраненной темы при загрузке
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedTheme = localStorage.getItem('theme');
+            const themeToggle = document.getElementById('themeToggle');
+            
+            if (savedTheme === 'dark') {
+                document.body.classList.add('dark-theme');
+                themeToggle.innerHTML = `
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 9c1.65 0 3 1.35 3 3s-1.35 3-3 3-3-1.35-3-3 1.35-3 3-3z"/>
+                        <path d="M20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12 20 8.69zm-2 5.79V18h-3.52L12 20.48 9.52 18H6v-3.52L3.52 12 6 9.52V6h3.52L12 3.52 14.48 6H18v3.52L20.48 12 18 14.48z"/>
+                    </svg>
+                    Тема
+                `;
+            }
+            
+            themeToggle.addEventListener('click', toggleTheme);
         });
-    }
+
+        function updateTicketStatus(status) {
+            if (confirm('Изменить статус тикета?')) {
+                fetch('/api/tickets/{{ ticket.id }}', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: status })
+                }).then(response => {
+                    if (response.ok) {
+                        location.reload();
+                    } else {
+                        alert('Ошибка при обновлении статуса');
+                    }
+                });
+            }
+        }
+
+        function sendMessage() {
+            const messageText = document.getElementById('message-text').value.trim();
+            const resultDiv = document.getElementById('message-result');
+            
+            if (!messageText) {
+                resultDiv.innerHTML = '<span class="error">Введите текст сообщения</span>';
+                return;
+            }
+        
+            console.log(`Отправка сообщения для тикета {{ ticket.id }}, пользователь: {{ ticket.user_id }}`);
+        
+            fetch('/api/ticket/{{ ticket.id }}/send_message', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: messageText })
+            })
+            .then(response => {
+                console.log('Response status:', response.status);
+                return response.json().then(data => {
+                    return { ok: response.ok, data: data };
+                });
+            })
+            .then(({ ok, data }) => {
+                console.log('Response data:', data);
+                if (ok && data.success) {
+                    resultDiv.innerHTML = '<span class="success">✅ ' + data.message + '</span>';
+                    document.getElementById('message-text').value = '';
+                    loadConversation();
+                } else {
+                    resultDiv.innerHTML = '<span class="error">❌ ' + (data.error || 'Неизвестная ошибка') + '</span>';
+                }
+            })
+            .catch(error => {
+                console.error('Fetch error:', error);
+                resultDiv.innerHTML = '<span class="error">❌ Ошибка отправки: ' + error + '</span>';
+            });
+        }
+
+        function loadConversation() {
+            fetch('/api/ticket/{{ ticket.id }}/conversation')
+            .then(response => response.json())
+            .then(messages => {
+                const container = document.getElementById('conversation-container');
+                container.innerHTML = '';
+                
+                if (messages.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <h3>💭 Нет сообщений</h3>
+                            <p>Начните общение с пользователем</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                messages.forEach(message => {
+                    const messageDiv = document.createElement('div');
+                    messageDiv.className = `message ${message.is_from_admin ? 'message-admin' : 'message-user'}`;
+                    
+                    messageDiv.innerHTML = `
+                        <div class="message-sender">
+                            ${message.is_from_admin ? '👨‍💼 Администратор' : '👤 Пользователь'}
+                            <span class="message-time">${message.timestamp}</span>
+                        </div>
+                        <div class="message-text">${message.message_text}</div>
+                    `;
+                    
+                    container.appendChild(messageDiv);
+                });
+                
+                // Прокрутка к последнему сообщению
+                container.scrollTop = container.scrollHeight;
+            });
+        }
+
+        // Автообновление переписки каждые 10 секунд
+        setInterval(loadConversation, 10000);
     </script>
 </body>
 </html>
