@@ -363,6 +363,10 @@ def login():
     
     return render_template('login.html')
 
+@app.route('/db')
+def db():
+    return render_template('debug_db.delete.html')
+
 @app.route('/dashboard')
 def dashboard():
     if 'admin' not in session:
