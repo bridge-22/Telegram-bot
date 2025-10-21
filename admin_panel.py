@@ -282,6 +282,133 @@ def get_system_stats():
         'active_users': active_users
     }
 
+# НОВЫЕ ФУНКЦИИ ДЛЯ ПРОСМОТРА БАЗЫ ДАННЫХ
+def get_database_info():
+    """Получить полную информацию о структуре базы данных"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    # Получаем список всех таблиц
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+    tables = [row[0] for row in cursor.fetchall()]
+    
+    db_info = {}
+    
+    for table in tables:
+        # Получаем информацию о столбцах
+        cursor.execute(f"PRAGMA table_info({table})")
+        columns = cursor.fetchall()
+        
+        # Получаем количество записей
+        cursor.execute(f"SELECT COUNT(*) FROM {table}")
+        count = cursor.fetchone()[0]
+        
+        # Получаем примеры данных (первые 10 записей)
+        cursor.execute(f"SELECT * FROM {table} LIMIT 10")
+        data = cursor.fetchall()
+        
+        # Получаем статистику для таблицы тикетов
+        stats = {}
+        if table == 'support_tickets':
+            cursor.execute("SELECT status, COUNT(*) FROM support_tickets GROUP BY status")
+            status_stats = cursor.fetchall()
+            stats = {status: count for status, count in status_stats}
+            
+            cursor.execute("SELECT ticket_type, COUNT(*) FROM support_tickets GROUP BY ticket_type")
+            type_stats = cursor.fetchall()
+            stats['by_type'] = {ticket_type: count for ticket_type, count in type_stats}
+            
+            # Среднее время ответа
+            cursor.execute('''
+                SELECT AVG((julianday(resolved_at) - julianday(created_at)) * 24) 
+                FROM support_tickets 
+                WHERE resolved_at IS NOT NULL
+            ''')
+            avg_time = cursor.fetchone()[0]
+            stats['avg_response_time'] = round(avg_time or 0, 2)
+        
+        db_info[table] = {
+            'columns': columns,
+            'count': count,
+            'data': data,
+            'stats': stats
+        }
+    
+    conn.close()
+    return db_info
+
+def get_database_stats():
+    """Получить общую статистику по базе данных"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    # Количество таблиц
+    cursor.execute("SELECT COUNT(*) FROM sqlite_master WHERE type='table'")
+    total_tables = cursor.fetchone()[0]
+    
+    # Общее количество записей во всех таблицах
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+    tables = [row[0] for row in cursor.fetchall()]
+    
+    total_records = 0
+    for table in tables:
+        cursor.execute(f"SELECT COUNT(*) FROM {table}")
+        total_records += cursor.fetchone()[0]
+    
+    # Дополнительная статистика
+    cursor.execute("SELECT COUNT(*) FROM users")
+    total_users = cursor.fetchone()[0]
+    
+    cursor.execute("SELECT COUNT(*) FROM support_tickets")
+    total_tickets = cursor.fetchone()[0]
+    
+    cursor.execute("SELECT COUNT(*) FROM messages")
+    total_messages = cursor.fetchone()[0]
+    
+    cursor.execute("SELECT COUNT(*) FROM media_files")
+    total_media = cursor.fetchone()[0]
+    
+    conn.close()
+    
+    return {
+        'total_tables': total_tables,
+        'total_records': total_records,
+        'total_users': total_users,
+        'total_tickets': total_tickets,
+        'total_messages': total_messages,
+        'total_media': total_media
+    }
+
+def execute_custom_query(query):
+    """Выполнить произвольный SQL-запрос"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute(query)
+        
+        if query.strip().upper().startswith('SELECT'):
+            results = cursor.fetchall()
+            columns = [description[0] for description in cursor.description]
+            
+            formatted_results = []
+            for row in results:
+                formatted_row = {}
+                for i, column in enumerate(columns):
+                    formatted_row[column] = row[i]
+                formatted_results.append(formatted_row)
+            
+            conn.close()
+            return True, formatted_results
+        else:
+            conn.commit()
+            conn.close()
+            return True, f"Query executed successfully. Rows affected: {cursor.rowcount}"
+            
+    except Exception as e:
+        conn.close()
+        return False, str(e)
+
 # Инициализация Flask приложения
 app = Flask(__name__)
 app.secret_key = 'admin-secret-key-12345-change-in-production'
@@ -446,6 +573,20 @@ def users_page():
     
     return render_template('users.html', users=users, admin=session.get('admin'))
 
+# НОВЫЙ МАРШРУТ ДЛЯ ПРОСМОТРА БАЗЫ ДАННЫХ
+@app.route('/database')
+def database_page():
+    if 'admin' not in session:
+        return redirect(url_for('login'))
+    
+    db_info = get_database_info()
+    db_stats = get_database_stats()
+    
+    return render_template('database.html', 
+                         db_info=db_info,
+                         db_stats=db_stats,
+                         admin=session.get('admin'))
+
 @app.route('/media/<path:filename>')
 def serve_media(filename):
     if 'admin' not in session:
@@ -537,6 +678,33 @@ def api_users():
     
     conn.close()
     return jsonify(users)
+
+# НОВЫЕ API ЭНДПОИНТЫ ДЛЯ БАЗЫ ДАННЫХ
+@app.route('/api/database/query', methods=['POST'])
+def api_execute_query():
+    if 'admin' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    data = request.get_json()
+    query = data.get('query')
+    
+    if not query:
+        return jsonify({'error': 'Query is required'}), 400
+    
+    success, result = execute_custom_query(query)
+    
+    if success:
+        return jsonify({'success': True, 'results': result})
+    else:
+        return jsonify({'success': False, 'error': result}), 400
+
+@app.route('/api/database/info')
+def api_database_info():
+    if 'admin' not in session:
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    db_info = get_database_info()
+    return jsonify(db_info)
 
 @app.route('/logout')
 def logout():
@@ -718,6 +886,7 @@ def create_basic_templates():
                 <a href="/tickets?status=open">⚠️ Открытые</a>
                 <a href="/tickets?status=resolved">✅ Решенные</a>
                 <a href="/users">👥 Пользователи</a>
+                <a href="/database">🗃️ База данных</a>
             </div>
         </div>
     </div>
@@ -773,122 +942,722 @@ def create_basic_templates():
 
     # tickets.html (уже создан ранее)
     # ticket_detail.html (уже создан ранее)
-    # users.html (нужно создать)
+    # users.html (уже создан ранее)
 
-    # users.html
-    with open(os.path.join(templates_dir, 'users.html'), 'w', encoding='utf-8') as f:
+    # database.html - НОВЫЙ ШАБЛОН ДЛЯ ПРОСМОТРА БАЗЫ ДАННЫХ
+    with open(os.path.join(templates_dir, 'database.html'), 'w', encoding='utf-8') as f:
         f.write('''<!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-    <title>Пользователи</title>
+    <title>Информация о базе данных</title>
     <meta charset="utf-8">
     <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f6f8fa;
+            --bg-tertiary: #fafbfc;
+            --border-primary: #e1e4e8;
+            --border-secondary: #d1d5da;
+            --text-primary: #24292e;
+            --text-secondary: #586069;
+            --text-tertiary: #6a737d;
+            --accent-color: #0366d6;
+            --accent-hover: #0256c7;
+            --success-color: #28a745;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+            --shadow-hover: 0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23);
+        }
+
+        .dark-theme {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --border-primary: #30363d;
+            --border-secondary: #3b424a;
+            --text-primary: #f0f6fc;
+            --text-secondary: #c9d1d9;
+            --text-tertiary: #8b949e;
+            --accent-color: #58a6ff;
+            --accent-hover: #4493f1;
+            --success-color: #3fb950;
+            --warning-color: #d29922;
+            --danger-color: #f85149;
+            --shadow: 0 1px 3px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.4);
+            --shadow-hover: 0 3px 6px rgba(0,0,0,0.6), 0 3px 6px rgba(0,0,0,0.5);
+        }
+
         body { 
-            font-family: Arial, sans-serif; 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', sans-serif; 
             margin: 0; 
             padding: 0;
-            background: #f0f2f5;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            transition: background-color 0.3s, color 0.3s;
         }
+
         .header { 
-            background: white; 
-            padding: 20px; 
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
+            background: var(--bg-secondary); 
+            padding: 16px 0;
+            border-bottom: 1px solid var(--border-primary);
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
-        .nav a { 
-            margin-right: 20px; 
-            text-decoration: none; 
-            color: #007cba;
-            font-weight: bold;
-            padding: 8px 16px;
-            border-radius: 4px;
-        }
-        .nav a:hover {
-            background: #f0f8ff;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
-        }
-        .user-card {
-            background: white;
-            padding: 20px;
-            margin: 15px 0;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .user-stats {
-            display: flex;
-            gap: 20px;
-            margin-top: 10px;
-        }
-        .stat {
-            background: #f5f5f5;
-            padding: 10px;
-            border-radius: 4px;
-            text-align: center;
-            flex: 1;
-        }
-        .user-info {
+
+        .header-content {
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
-        .user-actions {
-            margin-top: 10px;
+
+        .header h1 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav { 
+            display: flex;
+            gap: 8px;
+        }
+
+        .nav a { 
+            text-decoration: none; 
+            color: var(--text-secondary);
+            font-weight: 500;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: background-color 0.2s, color 0.2s;
+        }
+
+        .nav a:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .nav a.active {
+            background: var(--accent-color);
+            color: white;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 16px;
+        }
+
+        .theme-toggle {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-primary);
+            border-radius: 6px;
+            padding: 8px 12px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: background-color 0.2s;
+        }
+
+        .theme-toggle:hover {
+            background: var(--bg-secondary);
+        }
+
+        .logout-btn {
+            color: var(--danger-color) !important;
+        }
+
+        .logout-btn:hover {
+            background: rgba(220, 53, 69, 0.1) !important;
+        }
+
+        .database-overview {
+            background: var(--bg-secondary);
+            padding: 24px;
+            border-radius: 6px;
+            border: 1px solid var(--border-primary);
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: var(--bg-tertiary);
+            padding: 16px;
+            border-radius: 6px;
+            border: 1px solid var(--border-primary);
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--accent-color);
+            margin: 8px 0;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .table-section {
+            background: var(--bg-secondary);
+            padding: 24px;
+            border-radius: 6px;
+            border: 1px solid var(--border-primary);
+            margin-bottom: 24px;
+            box-shadow: var(--shadow);
+        }
+
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .table-title {
+            font-size: 16px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .table-count {
+            background: var(--accent-color);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            border: 1px solid var(--border-primary);
+            border-radius: 6px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        th {
+            background: var(--bg-tertiary);
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 1px solid var(--border-primary);
+            color: var(--text-secondary);
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid var(--border-primary);
+        }
+
+        tr:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .column-type {
+            font-size: 12px;
+            color: var(--text-tertiary);
+            font-family: monospace;
+        }
+
+        .empty-state {
+            padding: 40px 20px;
+            text-align: center;
+            color: var(--text-tertiary);
+        }
+
+        .empty-state h3 {
+            margin: 0 0 8px 0;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .empty-state p {
+            margin: 0;
+            font-size: 14px;
+        }
+
+        .json-view {
+            background: var(--bg-tertiary);
+            padding: 12px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-primary);
+            margin-bottom: 16px;
+        }
+
+        .tab {
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab.active {
+            color: var(--accent-color);
+            border-bottom: 2px solid var(--accent-color);
+        }
+
+        .tab:hover {
+            color: var(--text-primary);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .search-box {
+            margin-bottom: 16px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--border-primary);
+            border-radius: 6px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+
+        .search-input:focus {
+            border-color: var(--accent-color);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(3, 102, 214, 0.3);
         }
     </style>
 </head>
 <body>
     <div class="header">
         <div class="container">
-            <h1>👥 Пользователи бота</h1>
-            <div class="nav">
-                <a href="/dashboard">📊 Дашборд</a>
-                <a href="/tickets">🎫 Тикеты</a>
-                <a href="/users">👥 Пользователи</a>
-                <a href="/logout" style="color: #ff4444;">🚪 Выйти</a>
+            <div class="header-content">
+                <h1>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M3 5v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2zm16 14H5V5h14v14zM7 7h10v2H7V7zm0 4h10v2H7v-2zm0 4h7v2H7v-2z"/>
+                    </svg>
+                    База данных - Полная информация
+                </h1>
+                <div style="display: flex; align-items: center; gap: 16px;">
+                    <button class="theme-toggle" id="themeToggle">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/>
+                        </svg>
+                        Тема
+                    </button>
+                    <div class="nav">
+                        <a href="/dashboard">📊 Дашборд</a>
+                        <a href="/tickets">🎫 Тикеты</a>
+                        <a href="/users">👥 Пользователи</a>
+                        <a href="/database" class="active">🗃️ База данных</a>
+                        <a href="/logout" class="logout-btn">🚪 Выйти</a>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
     <div class="container">
-        {% for user in users %}
-        <div class="user-card">
-            <div class="user-info">
-                <div>
-                    <h3>{{ user.first_name }} 
-                        {% if user.username %}
-                        <small>(@{{ user.username }})</small>
-                        {% endif %}
-                    </h3>
-                    <p><strong>ID:</strong> {{ user.user_id }}</p>
-                    <p><strong>Зарегистрирован:</strong> {{ user.registration_date }}</p>
-                    <p><strong>Последняя активность:</strong> {{ user.last_activity }}</p>
+        <!-- Обзор базы данных -->
+        <div class="database-overview">
+            <h2 class="section-title">📊 Обзор базы данных</h2>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number">{{ db_stats.total_tables }}</div>
+                    <div class="stat-label">Таблиц в БД</div>
                 </div>
-            </div>
-            <div class="user-stats">
-                <div class="stat">
-                    <strong>💬 Сообщения</strong>
-                    <div>{{ user.message_count }}</div>
+                <div class="stat-card">
+                    <div class="stat-number">{{ db_stats.total_records }}</div>
+                    <div class="stat-label">Всего записей</div>
                 </div>
-                <div class="stat">
-                    <strong>🎫 Тикеты</strong>
-                    <div>{{ user.ticket_count }}</div>
+                <div class="stat-card">
+                    <div class="stat-number">{{ db_stats.total_users }}</div>
+                    <div class="stat-label">Пользователей</div>
                 </div>
-            </div>
-            <div class="user-actions">
-                <a href="/tickets?user_id={{ user.user_id }}">📋 Показать тикеты</a>
+                <div class="stat-card">
+                    <div class="stat-number">{{ db_stats.total_tickets }}</div>
+                    <div class="stat-label">Тикетов</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">{{ db_stats.total_messages }}</div>
+                    <div class="stat-label">Сообщений</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">{{ db_stats.total_media }}</div>
+                    <div class="stat-label">Медиафайлов</div>
+                </div>
             </div>
         </div>
-        {% else %}
-        <div style="background: white; padding: 40px; text-align: center; border-radius: 8px;">
-            <h3>😔 Пользователей нет</h3>
-            <p>Пока никто не использовал бота</p>
+
+        <!-- Поиск по базе данных -->
+        <div class="database-overview">
+            <h2 class="section-title">🔍 Поиск по базе данных</h2>
+            <div class="search-box">
+                <input type="text" class="search-input" id="searchInput" placeholder="Введите текст для поиска по всем таблицам...">
+            </div>
+        </div>
+
+        <!-- Список таблиц -->
+        {% for table_name, table_info in db_info.items() %}
+        <div class="table-section">
+            <div class="table-header">
+                <div class="table-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M3 17h18c.55 0 1-.45 1-1s-.45-1-1-1H3c-.55 0-1 .45-1 1s.45 1 1 1zm0-4h18c.55 0 1-.45 1-1s-.45-1-1-1H3c-.55 0-1 .45-1 1s.45 1 1 1zm0-4h18c.55 0 1-.45 1-1s-.45-1-1-1H3c-.55 0-1 .45-1 1s.45 1 1 1zM3 7c0 .55.45 1 1 1h18c.55 0 1-.45 1-1s-.45-1-1-1H4c-.55 0-1 .45-1 1z"/>
+                    </svg>
+                    {{ table_name }}
+                </div>
+                <div class="table-count">{{ table_info.count }} записей</div>
+            </div>
+
+            <div class="tabs">
+                <div class="tab active" data-tab="structure-{{ table_name }}">Структура</div>
+                <div class="tab" data-tab="data-{{ table_name }}">Данные</div>
+                {% if table_name == 'support_tickets' %}
+                <div class="tab" data-tab="stats-{{ table_name }}">Статистика</div>
+                {% endif %}
+            </div>
+
+            <!-- Структура таблицы -->
+            <div class="tab-content active" id="structure-{{ table_name }}">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Имя столбца</th>
+                                <th>Тип данных</th>
+                                <th>Размер</th>
+                                <th>NULL</th>
+                                <th>Ключ</th>
+                                <th>По умолчанию</th>
+                                <th>Дополнительно</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for column in table_info.columns %}
+                            <tr>
+                                <td><strong>{{ column[1] }}</strong></td>
+                                <td><code class="column-type">{{ column[2] }}</code></td>
+                                <td>{{ column[3] or '-' }}</td>
+                                <td>{{ 'YES' if column[4] else 'NO' }}</td>
+                                <td>{{ column[5] or '-' }}</td>
+                                <td>{{ column[6] or 'NULL' }}</td>
+                                <td>{{ column[7] or '-' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Данные таблицы -->
+            <div class="tab-content" id="data-{{ table_name }}">
+                {% if table_info.data %}
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                {% for column in table_info.columns %}
+                                <th>{{ column[1] }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in table_info.data %}
+                            <tr>
+                                {% for value in row %}
+                                <td>
+                                    {% if value is none %}
+                                        <span style="color: var(--text-tertiary); font-style: italic;">NULL</span>
+                                    {% elif value is string and value|length > 100 %}
+                                        {{ value[:100] }}...
+                                    {% elif value is mapping %}
+                                        <div class="json-view">{{ value | tojson }}</div>
+                                    {% else %}
+                                        {{ value }}
+                                    {% endif %}
+                                </td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <h3>😔 Нет данных</h3>
+                    <p>Таблица {{ table_name }} не содержит записей</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Статистика для таблицы тикетов -->
+            {% if table_name == 'support_tickets' %}
+            <div class="tab-content" id="stats-{{ table_name }}">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number">{{ table_info.stats.open or 0 }}</div>
+                        <div class="stat-label">Открытых тикетов</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">{{ table_info.stats.in_progress or 0 }}</div>
+                        <div class="stat-label">Тикетов в работе</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">{{ table_info.stats.resolved or 0 }}</div>
+                        <div class="stat-label">Решенных тикетов</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">{{ table_info.stats.avg_response_time or 0 }}</div>
+                        <div class="stat-label">Среднее время ответа (ч)</div>
+                    </div>
+                </div>
+                
+                {% if table_info.stats.by_type %}
+                <h4 style="margin: 20px 0 12px 0;">Распределение по типам:</h4>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Тип тикета</th>
+                                <th>Количество</th>
+                                <th>Процент</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for type, count in table_info.stats.by_type.items() %}
+                            <tr>
+                                <td>{{ type }}</td>
+                                <td>{{ count }}</td>
+                                <td>{{ "%.1f"|format((count / table_info.count) * 100) }}%</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
         </div>
         {% endfor %}
+
+        <!-- SQL-запросы -->
+        <div class="table-section">
+            <div class="table-header">
+                <div class="table-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M3 17h18c.55 0 1-.45 1-1s-.45-1-1-1H3c-.55 0-1 .45-1 1s.45 1 1 1zm0-4h18c.55 0 1-.45 1-1s-.45-1-1-1H3c-.55 0-1 .45-1 1s.45 1 1 1zm0-4h18c.55 0 1-.45 1-1s-.45-1-1-1H3c-.55 0-1 .45-1 1s.45 1 1 1zM3 7c0 .55.45 1 1 1h18c.55 0 1-.45 1-1s-.45-1-1-1H4c-.55 0-1 .45-1 1z"/>
+                    </svg>
+                    SQL-запросы
+                </div>
+            </div>
+            
+            <div style="margin-bottom: 16px;">
+                <textarea id="sqlQuery" placeholder="Введите SQL-запрос..." style="width: 100%; height: 100px; padding: 12px; border: 1px solid var(--border-primary); border-radius: 6px; background: var(--bg-primary); color: var(--text-primary); font-family: monospace;"></textarea>
+            </div>
+            <div>
+                <button class="theme-toggle" onclick="executeQuery()" style="background: var(--accent-color); color: white;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M8 5v14l11-7z"/>
+                    </svg>
+                    Выполнить запрос
+                </button>
+            </div>
+            <div id="queryResult" style="margin-top: 16px;"></div>
+        </div>
     </div>
+
+    <script>
+        // Функция для переключения темы
+        function toggleTheme() {
+            const body = document.body;
+            const themeToggle = document.getElementById('themeToggle');
+            
+            if (body.classList.contains('dark-theme')) {
+                body.classList.remove('dark-theme');
+                localStorage.setItem('theme', 'light');
+                themeToggle.innerHTML = `
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/>
+                    </svg>
+                    Тема
+                `;
+            } else {
+                body.classList.add('dark-theme');
+                localStorage.setItem('theme', 'dark');
+                themeToggle.innerHTML = `
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 9c1.65 0 3 1.35 3 3s-1.35 3-3 3-3-1.35-3-3 1.35-3 3-3z"/>
+                        <path d="M20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12 20 8.69zm-2 5.79V18h-3.52L12 20.48 9.52 18H6v-3.52L3.52 12 6 9.52V6h3.52L12 3.52 14.48 6H18v3.52L20.48 12 18 14.48z"/>
+                    </svg>
+                    Тема
+                `;
+            }
+        }
+
+        // Применение сохраненной темы при загрузке
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedTheme = localStorage.getItem('theme');
+            const themeToggle = document.getElementById('themeToggle');
+            
+            if (savedTheme === 'dark') {
+                document.body.classList.add('dark-theme');
+                themeToggle.innerHTML = `
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 9c1.65 0 3 1.35 3 3s-1.35 3-3 3-3-1.35-3-3 1.35-3 3-3z"/>
+                        <path d="M20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12 20 8.69zm-2 5.79V18h-3.52L12 20.48 9.52 18H6v-3.52L3.52 12 6 9.52V6h3.52L12 3.52 14.48 6H18v3.52L20.48 12 18 14.48z"/>
+                    </svg>
+                    Тема
+                `;
+            }
+            
+            themeToggle.addEventListener('click', toggleTheme);
+
+            // Обработчики для вкладок
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    const tabId = this.getAttribute('data-tab');
+                    const parentSection = this.closest('.table-section');
+                    
+                    // Деактивируем все вкладки и контенты в этой секции
+                    parentSection.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    parentSection.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    
+                    // Активируем текущую вкладку и контент
+                    this.classList.add('active');
+                    document.getElementById(tabId).classList.add('active');
+                });
+            });
+
+            // Поиск по таблицам
+            document.getElementById('searchInput').addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                
+                document.querySelectorAll('.table-section').forEach(section => {
+                    let hasMatch = false;
+                    
+                    // Поиск в заголовках таблиц
+                    const tableTitle = section.querySelector('.table-title').textContent.toLowerCase();
+                    if (tableTitle.includes(searchTerm)) {
+                        hasMatch = true;
+                    }
+                    
+                    // Поиск в данных таблиц
+                    section.querySelectorAll('td').forEach(cell => {
+                        if (cell.textContent.toLowerCase().includes(searchTerm)) {
+                            hasMatch = true;
+                            // Подсветка совпадений
+                            const text = cell.textContent;
+                            const regex = new RegExp(`(${searchTerm})`, 'gi');
+                            cell.innerHTML = text.replace(regex, '<mark style="background: yellow; color: black;">$1</mark>');
+                        }
+                    });
+                    
+                    // Показать/скрыть секцию на основе результатов поиска
+                    section.style.display = hasMatch || searchTerm === '' ? 'block' : 'none';
+                });
+            });
+        });
+
+        // Функция выполнения SQL-запроса
+        function executeQuery() {
+            const query = document.getElementById('sqlQuery').value;
+            const resultDiv = document.getElementById('queryResult');
+            
+            if (!query.trim()) {
+                resultDiv.innerHTML = '<div class="error" style="padding: 12px; background: rgba(220, 53, 69, 0.1); color: var(--danger-color); border-radius: 6px;">Введите SQL-запрос</div>';
+                return;
+            }
+            
+            resultDiv.innerHTML = '<div style="padding: 12px; background: rgba(3, 102, 214, 0.1); color: var(--accent-color); border-radius: 6px;">Выполнение запроса...</div>';
+            
+            fetch('/api/database/query', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: query })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    if (data.results && data.results.length > 0) {
+                        let html = '<div class="table-container"><table><thead><tr>';
+                        
+                        // Заголовки таблицы
+                        Object.keys(data.results[0]).forEach(key => {
+                            html += `<th>${key}</th>`;
+                        });
+                        html += '</tr></thead><tbody>';
+                        
+                        // Данные
+                        data.results.forEach(row => {
+                            html += '<tr>';
+                            Object.values(row).forEach(value => {
+                                html += `<td>${value !== null ? value : '<span style="color: var(--text-tertiary); font-style: italic;">NULL</span>'}</td>`;
+                            });
+                            html += '</tr>';
+                        });
+                        
+                        html += '</tbody></table></div>';
+                        resultDiv.innerHTML = html;
+                    } else {
+                        resultDiv.innerHTML = '<div class="success" style="padding: 12px; background: rgba(40, 167, 69, 0.1); color: var(--success-color); border-radius: 6px;">Запрос выполнен успешно. Нет данных для отображения.</div>';
+                    }
+                } else {
+                    resultDiv.innerHTML = `<div class="error" style="padding: 12px; background: rgba(220, 53, 69, 0.1); color: var(--danger-color); border-radius: 6px;">Ошибка: ${data.error}</div>`;
+                }
+            })
+            .catch(error => {
+                resultDiv.innerHTML = `<div class="error" style="padding: 12px; background: rgba(220, 53, 69, 0.1); color: var(--danger-color); border-radius: 6px;">Ошибка выполнения: ${error}</div>`;
+            });
+        }
+    </script>
 </body>
 </html>''')
 
@@ -902,6 +1671,7 @@ if __name__ == '__main__':
     
     print("🚀 Запуск расширенной админ-панели...")
     print("📸 Функционал: просмотр изображений, общение с пользователями, управление пользователями")
+    print("🗃️ НОВЫЙ ФУНКЦИОНАЛ: Просмотр всей информации базы данных")
     print("🌐 Адрес: http://localhost:5000")
     print("🔑 Логин: admin / admin123")
     
