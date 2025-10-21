@@ -363,22 +363,6 @@ def login():
     
     return render_template('login.html')
 
-@app.route('/database')
-def database_info():
-    if 'admin' not in session:
-        return redirect(url_for('login'))
-    
-    # Получаем статистику базы данных
-    db_stats = get_database_stats()
-    
-    # Получаем информацию о всех таблицах
-    db_info = get_database_info()
-    
-    return render_template('database.html',
-                         db_stats=db_stats,
-                         db_info=db_info,
-                         admin=session.get('admin'))
-
 @app.route('/dashboard')
 def dashboard():
     if 'admin' not in session:
