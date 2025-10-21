@@ -365,7 +365,8 @@ def login():
 
 @app.route('/db')
 def db():
-    return render_template('debug_db.delete.html')
+    return render_template('debug_db.delete.html',
+                          db_stats=stats)
 
 @app.route('/dashboard')
 def dashboard():
